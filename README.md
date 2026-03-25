@@ -11,6 +11,17 @@ Included:
 
 This repo is intended for moving production onto a separate VPS.
 
+## Quick Start
+
+1. Update:
+   - [hosts.yml](/opt/velveta/infra-prod/inventories/prod/hosts.yml)
+2. Run:
+   - `ansible-playbook playbooks/bootstrap.yml`
+   - `ansible-playbook playbooks/server.yml`
+   - `ansible-playbook playbooks/restore.yml`
+3. Detailed steps:
+   - [MIGRATION.md](/opt/velveta/infra-prod/MIGRATION.md)
+
 ## Inventory
 
 Use:
