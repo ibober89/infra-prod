@@ -1,0 +1,45 @@
+velveta_root: /opt/velveta
+
+velveta_users:
+  admin: admin
+  erp_dev: erpdev
+  frontend_dev: frontend
+  runner: github-runner
+
+velveta_paths:
+  prod_root: /opt/velveta/prod
+  nginx_root: /opt/velveta/nginx
+  infra_root: /opt/velveta/infra-prod
+  backups_root: /opt/velveta/backups
+  prod_frappe_root: /opt/velveta/prod/frappe
+  prod_nextjs_root: /opt/velveta/prod/nextjs
+  runner_frontendx_root: /opt/actions-runner-frontendx
+
+velveta_compose_targets:
+  prod_frappe: /opt/velveta/prod/docker-compose.frappe.yml
+  prod_nextjs: /opt/velveta/prod/docker-compose.nextjs.yml
+  nginx: /opt/velveta/nginx/docker-compose.yml
+
+velveta_domains:
+  erp_prod: erp.velvetacare.com
+  nextjs_prod:
+    - velvetacare.com
+    - www.velvetacare.com
+
+velveta_ports:
+  erp_prod: 8080
+  nextjs_prod: 8082
+
+velveta_sites:
+  prod: erp.velvetacare.com
+
+velveta_db:
+  root_password: "123"
+
+velveta_backup:
+  retention_days: 1
+  timer_on_calendar: "*-*-* 03:30:00"
+  latest_symlink: /opt/velveta/backups/latest
+
+velveta_restore:
+  backup_dir: /opt/velveta/backups/latest

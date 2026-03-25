@@ -1,0 +1,149 @@
+- import_playbook: /opt/velveta/infra-prod/playbooks/server.yml
+
+- name: Restore the Velveta prod server from a backup snapshot
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+  vars:
+    restore_backup_dir: "{{ velveta_restore.backup_dir }}"
+
+  tasks:
+    - name: Check selected backup directory
+      ansible.builtin.stat:
+        path: "{{ restore_backup_dir }}"
+      register: velveta_restore_backup
+
+    - name: Fail when the selected backup directory does not exist
+      ansible.builtin.fail:
+        msg: "Backup directory {{ restore_backup_dir }} does not exist."
+      when: not velveta_restore_backup.stat.exists
+
+    - name: Stop frontend runner service before restoring runner state
+      ansible.builtin.systemd:
+        name: actions.runner.ibober89-frontendX.vm519642-frontendx.service
+        state: stopped
+      ignore_errors: true
+
+    - name: Stop nginx before restore
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.nginx }} down
+      args:
+        executable: /bin/bash
+      ignore_errors: true
+      changed_when: true
+
+    - name: Stop prod Frappe before restore
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.prod_frappe }} down
+      args:
+        executable: /bin/bash
+      ignore_errors: true
+      changed_when: true
+
+    - name: Stop prod Next.js before restore
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.prod_nextjs }} down
+      args:
+        executable: /bin/bash
+      ignore_errors: true
+      changed_when: true
+
+    - name: Restore system nginx config archive
+      ansible.builtin.unarchive:
+        src: "{{ restore_backup_dir }}/system/nginx-config.tgz"
+        dest: "{{ velveta_root }}"
+        remote_src: true
+
+    - name: Restore system infra config archive
+      ansible.builtin.unarchive:
+        src: "{{ restore_backup_dir }}/system/infra-config.tgz"
+        dest: "{{ velveta_root }}"
+        remote_src: true
+
+    - name: Restore frontend runner archive when present
+      ansible.builtin.unarchive:
+        src: "{{ restore_backup_dir }}/system/actions-runner-frontendx.tgz"
+        dest: /opt
+        remote_src: true
+      ignore_errors: true
+
+    - name: Restore prod Next.js source archive
+      ansible.builtin.unarchive:
+        src: "{{ restore_backup_dir }}/prod/prod-nextjs-src.tgz"
+        dest: "{{ velveta_paths.prod_root }}"
+        remote_src: true
+      ignore_errors: true
+
+    - name: Start prod Frappe DB for SQL restore
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.prod_frappe }} up -d db
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Restore prod Frappe database dump
+      ansible.builtin.shell: cat {{ restore_backup_dir }}/prod/prod-frappe-db.sql | docker exec -i frappe-db-1 mariadb -uroot -p{{ velveta_db.root_password }}
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Remove old prod Frappe sites volume before restore
+      ansible.builtin.shell: docker volume rm -f frappe_sites
+      args:
+        executable: /bin/bash
+      ignore_errors: true
+      changed_when: true
+
+    - name: Create prod Frappe sites volume
+      ansible.builtin.shell: docker volume create frappe_sites
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Restore prod Frappe sites volume archive
+      ansible.builtin.shell: |
+        docker run --rm \
+          -v frappe_sites:/dest \
+          -v {{ restore_backup_dir }}/prod:/backup:ro \
+          alpine:3.20 \
+          sh -lc 'rm -rf /dest/* && tar -xzf /backup/prod-frappe-sites-volume.tgz -C /dest'
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Re-run prod baseline converge after archives are restored
+      ansible.builtin.command:
+        cmd: ansible-playbook -i {{ velveta_paths.infra_root }}/inventories/prod/hosts.yml {{ velveta_paths.infra_root }}/playbooks/server.yml
+      changed_when: true
+
+    - name: Recreate prod Next.js image from restored source
+      ansible.builtin.shell: |
+        docker build \
+          -t velveta-nextjs-prod:latest \
+          -f {{ velveta_paths.prod_root }}/Dockerfile.nextjs \
+          {{ velveta_paths.prod_root }}
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Start prod Frappe stack
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.prod_frappe }} up -d
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Start prod Next.js stack
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.prod_nextjs }} up -d
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Start nginx stack
+      ansible.builtin.shell: docker compose -f {{ velveta_compose_targets.nginx }} up -d
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Start frontend runner service after restore
+      ansible.builtin.systemd:
+        name: actions.runner.ibober89-frontendX.vm519642-frontendx.service
+        state: started
+      ignore_errors: true

@@ -1,0 +1,9 @@
+[Unit]
+Description=Velveta backup job
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ velveta_paths.infra_root }}/scripts/backup-all.sh
+User=root

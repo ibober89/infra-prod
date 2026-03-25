@@ -1,0 +1,171 @@
+- import_playbook: /opt/velveta/infra-prod/playbooks/bootstrap.yml
+
+- name: Converge the Velveta prod server baseline
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+  tasks:
+    - name: Ensure baseline OS packages are installed
+      ansible.builtin.apt:
+        name:
+          - git
+          - curl
+          - rsync
+          - acl
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is enabled and running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Ensure admin user exists
+      ansible.builtin.user:
+        name: "{{ velveta_users.admin }}"
+        shell: /bin/bash
+        state: present
+
+    - name: Ensure frontend user exists
+      ansible.builtin.user:
+        name: "{{ velveta_users.frontend_dev }}"
+        shell: /bin/bash
+        groups:
+          - docker
+        append: true
+        state: present
+
+    - name: Ensure ERP dev user exists
+      ansible.builtin.user:
+        name: "{{ velveta_users.erp_dev }}"
+        shell: /bin/bash
+        groups:
+          - docker
+        append: true
+        state: present
+
+    - name: Ensure runner user exists
+      ansible.builtin.user:
+        name: "{{ velveta_users.runner }}"
+        shell: /bin/bash
+        groups:
+          - docker
+          - "{{ velveta_users.frontend_dev }}"
+          - "{{ velveta_users.erp_dev }}"
+        append: true
+        state: present
+
+    - name: Ensure prod project directories use the current ownership model
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - path: "{{ velveta_paths.prod_root }}"
+          owner: root
+          group: root
+          mode: "0755"
+        - path: "{{ velveta_paths.prod_frappe_root }}"
+          owner: "{{ velveta_users.erp_dev }}"
+          group: "{{ velveta_users.erp_dev }}"
+          mode: "0755"
+        - path: "{{ velveta_paths.prod_nextjs_root }}"
+          owner: "{{ velveta_users.frontend_dev }}"
+          group: "{{ velveta_users.frontend_dev }}"
+          mode: "2775"
+        - path: "{{ velveta_paths.nginx_root }}"
+          owner: "{{ velveta_users.admin }}"
+          group: "{{ velveta_users.admin }}"
+          mode: "0755"
+        - path: "{{ velveta_paths.runner_frontendx_root }}"
+          owner: "{{ velveta_users.runner }}"
+          group: "{{ velveta_users.runner }}"
+          mode: "0755"
+        - path: "{{ velveta_paths.backups_root }}"
+          owner: root
+          group: root
+          mode: "0755"
+
+    - name: Deploy Docker installer helper
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/scripts/install-docker.sh"
+        dest: "{{ velveta_paths.infra_root }}/scripts/install-docker.sh"
+        mode: "0755"
+
+    - name: Deploy backup script
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/backup-all.sh.j2"
+        dest: "{{ velveta_paths.infra_root }}/scripts/backup-all.sh"
+        mode: "0700"
+
+    - name: Deploy backup systemd service
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/velveta-backup.service.j2"
+        dest: /etc/systemd/system/velveta-backup.service
+        mode: "0644"
+      notify: Reload systemd
+
+    - name: Deploy backup systemd timer
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/velveta-backup.timer.j2"
+        dest: /etc/systemd/system/velveta-backup.timer
+        mode: "0644"
+      notify: Reload systemd
+
+    - name: Check whether runner service executables exist
+      ansible.builtin.stat:
+        path: "{{ item.working_directory }}/runsvc.sh"
+      loop:
+        - name: actions.runner.ibober89-frontendX.vm519642-frontendx.service
+          description: GitHub Actions Runner (ibober89-frontendX.vm519642-frontendx)
+          working_directory: /opt/actions-runner-frontendx
+      register: velveta_runner_execs
+
+    - name: Deploy runner systemd service units when runner files exist
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/actions-runner.service.j2"
+        dest: "/etc/systemd/system/{{ item.item.name }}"
+        mode: "0644"
+      loop: "{{ velveta_runner_execs.results }}"
+      when: item.stat.exists
+      notify: Reload systemd
+
+    - name: Flush systemd handlers before enabling units
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enable backup timer
+      ansible.builtin.systemd:
+        name: velveta-backup.timer
+        enabled: true
+        state: started
+
+    - name: Ensure runner services stay enabled when present
+      ansible.builtin.systemd:
+        name: "{{ item.item.name }}"
+        enabled: true
+        state: started
+      loop: "{{ velveta_runner_execs.results }}"
+      when: item.stat.exists
+
+    - name: Ensure git safe directories are configured for prod repos
+      become_user: "{{ item.user }}"
+      ansible.builtin.shell: |
+        git config --global --get-all safe.directory | grep -Fx "{{ item.path }}" >/dev/null || \
+        git config --global --add safe.directory "{{ item.path }}"
+      args:
+        executable: /bin/bash
+      loop:
+        - user: github-runner
+          path: /opt/velveta/prod/nextjs
+      changed_when: false

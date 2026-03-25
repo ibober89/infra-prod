@@ -1,0 +1,15 @@
+[Unit]
+Description={{ item.item.description }}
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+ExecStart={{ item.item.working_directory }}/runsvc.sh
+User={{ velveta_users.runner }}
+WorkingDirectory={{ item.item.working_directory }}
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+
+[Install]
+WantedBy=multi-user.target

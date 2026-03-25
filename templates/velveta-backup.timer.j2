@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Velveta backups on schedule
+
+[Timer]
+OnCalendar={{ velveta_backup.timer_on_calendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

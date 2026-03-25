@@ -1,0 +1,88 @@
+- name: Bootstrap Velveta prod server layout
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  tasks:
+    - name: Ensure base directories for prod exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ velveta_root }}"
+        - "{{ velveta_paths.prod_root }}"
+        - "{{ velveta_paths.prod_root }}/frappe"
+        - "{{ velveta_paths.nginx_root }}"
+        - "{{ velveta_paths.nginx_root }}/conf.d"
+        - "{{ velveta_paths.nginx_root }}/sites-enabled"
+        - "{{ velveta_paths.nginx_root }}/ssl"
+        - "{{ velveta_paths.backups_root }}"
+
+    - name: Deploy prod env file
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/.env"
+        dest: "{{ velveta_paths.prod_root }}/.env"
+        mode: "0640"
+
+    - name: Deploy prod Frappe env file
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/frappe.env"
+        dest: "{{ velveta_paths.prod_root }}/frappe/.env"
+        mode: "0644"
+
+    - name: Deploy prod Frappe compose
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/docker-compose.frappe.yml"
+        dest: "{{ velveta_compose_targets.prod_frappe }}"
+        mode: "0644"
+
+    - name: Deploy prod Next.js compose
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/docker-compose.nextjs.yml"
+        dest: "{{ velveta_compose_targets.prod_nextjs }}"
+        mode: "0644"
+
+    - name: Deploy prod apps.json
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/apps.json"
+        dest: "{{ velveta_paths.prod_root }}/frappe/apps.json"
+        mode: "0644"
+
+    - name: Deploy prod Next.js Dockerfile
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/Dockerfile.nextjs"
+        dest: "{{ velveta_paths.prod_root }}/Dockerfile.nextjs"
+        mode: "0644"
+
+    - name: Deploy prod Next.js dockerignore
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/.dockerignore"
+        dest: "{{ velveta_paths.prod_root }}/.dockerignore"
+        mode: "0644"
+
+    - name: Deploy nginx compose
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/nginx/docker-compose.yml"
+        dest: "{{ velveta_compose_targets.nginx }}"
+        mode: "0644"
+
+    - name: Deploy nginx main config
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/nginx/nginx.conf"
+        dest: "{{ velveta_paths.nginx_root }}/nginx.conf"
+        mode: "0644"
+
+    - name: Deploy prod-only nginx site config
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/nginx/default.conf"
+        dest: "{{ velveta_paths.nginx_root }}/conf.d/default.conf"
+        mode: "0644"
+
+    - name: Show next-step reminder
+      ansible.builtin.debug:
+        msg:
+          - "Prod bootstrap files are in place."
+          - "Use inventories/prod/hosts.yml with server-prod.yml or restore-prod.yml."

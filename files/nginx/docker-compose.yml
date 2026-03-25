@@ -1,0 +1,36 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: velveta-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+    volumes:
+      - /opt/velveta/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /opt/velveta/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /opt/velveta/nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+    networks:
+      - default
+      - prod-frappe
+      - dev-frappe
+      - prod-nextjs
+      - dev-nextjs
+
+networks:
+  default:
+  prod-frappe:
+    external: true
+    name: frappe_default
+  dev-frappe:
+    external: true
+    name: dev-frappe_default
+  prod-nextjs:
+    external: true
+    name: nextjs_default
+  dev-nextjs:
+    external: true
+    name: dev-nextjs_default

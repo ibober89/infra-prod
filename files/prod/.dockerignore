@@ -1,0 +1,16 @@
+*
+!Dockerfile.nextjs
+!nextjs/
+!nextjs/package.json
+!nextjs/package-lock.json
+!nextjs/next.config.mjs
+!nextjs/postcss.config.js
+!nextjs/tailwind.config.js
+!nextjs/tsconfig.json
+!nextjs/next-env.d.ts
+!nextjs/app/
+!nextjs/src/
+!nextjs/public/
+!nextjs/messages/
+!nextjs/lib/
+!nextjs/middleware.ts
