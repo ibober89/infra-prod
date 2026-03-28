@@ -53,9 +53,6 @@ velveta_repos:
     url: https://github.com/frappe/frappe
     version: version-16
 
-velveta_nextjs:
-  ecommerce_price_list: ""
-
 velveta_backup:
   retention_days: 1
   timer_on_calendar: "*-*-* 03:30:00"
