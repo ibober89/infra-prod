@@ -12,6 +12,8 @@ velveta_paths:
   infra_root: /opt/velveta/infra-prod
   backups_root: /opt/velveta/backups
   secrets_root: /opt/velveta/infra-prod/.secrets
+  prod_env_file: /opt/velveta/prod/.env
+  prod_nextjs_env_file: /opt/velveta/prod/nextjs.env
   prod_frappe_root: /opt/velveta/prod/frappe
   prod_nextjs_root: /opt/velveta/prod/nextjs
   prod_frappe_image_root: /opt/velveta/prod/frappe/image

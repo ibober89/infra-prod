@@ -32,7 +32,15 @@
     - name: Deploy prod env file
       ansible.builtin.template:
         src: "{{ velveta_paths.infra_root }}/templates/prod.env.j2"
-        dest: "{{ velveta_paths.prod_root }}/.env"
+        dest: "{{ velveta_paths.prod_env_file }}"
+        owner: root
+        group: "{{ velveta_users.runner }}"
+        mode: "0640"
+
+    - name: Deploy prod Next.js env file
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/nextjs.env.j2"
+        dest: "{{ velveta_paths.prod_nextjs_env_file }}"
         owner: root
         group: "{{ velveta_users.runner }}"
         mode: "0640"
