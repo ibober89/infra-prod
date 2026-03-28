@@ -33,6 +33,8 @@
       ansible.builtin.template:
         src: "{{ velveta_paths.infra_root }}/templates/prod.env.j2"
         dest: "{{ velveta_paths.prod_root }}/.env"
+        owner: root
+        group: "{{ velveta_users.runner }}"
         mode: "0640"
 
     - name: Deploy prod Frappe env file
