@@ -54,13 +54,7 @@ velveta_repos:
     version: version-16
 
 velveta_nextjs:
-  base_url: https://velvetacare.com
   ecommerce_price_list: ""
-  ahlpay_merchant_id: ""
-  ahlpay_user_code: ""
-  ahlpay_email: ""
-  ahlpay_password: ""
-  ahlpay_environment: https://developer.ahlpay.com.tr
 
 velveta_backup:
   retention_days: 1
