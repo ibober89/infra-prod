@@ -92,6 +92,10 @@
           owner: "{{ velveta_users.admin }}"
           group: "{{ velveta_users.admin }}"
           mode: "0755"
+        - path: "{{ velveta_paths.runner_ecommerce_root }}"
+          owner: "{{ velveta_users.runner }}"
+          group: "{{ velveta_users.runner }}"
+          mode: "0755"
         - path: "{{ velveta_paths.runner_frontendx_root }}"
           owner: "{{ velveta_users.runner }}"
           group: "{{ velveta_users.runner }}"
@@ -203,23 +207,38 @@
       when: not item.item.stat.exists
       no_log: true
 
-    - name: Check whether runner service executables exist
+    - name: Check whether runner service helper exists
+      ansible.builtin.stat:
+        path: "{{ item.working_directory }}/svc.sh"
+      loop: "{{ velveta_runner_services }}"
+      register: velveta_runner_service_helpers
+
+    - name: Check whether runner service is already installed
+      ansible.builtin.stat:
+        path: "{{ item.working_directory }}/.service"
+      loop: "{{ velveta_runner_services }}"
+      register: velveta_runner_installed_services
+
+    - name: Install runner systemd service through svc.sh
+      ansible.builtin.shell: "./svc.sh install {{ velveta_users.runner }}"
+      args:
+        chdir: "{{ item.item.working_directory }}"
+        executable: /bin/bash
+      loop: "{{ velveta_runner_installed_services.results }}"
+      when:
+        - item.item.working_directory is defined
+        - item.stat.exists is defined
+        - not item.stat.exists
+      changed_when: true
+
+    - name: Flush systemd handlers before enabling units
+      ansible.builtin.meta: flush_handlers
+
+    - name: Check whether runner service launcher exists
       ansible.builtin.stat:
         path: "{{ item.working_directory }}/runsvc.sh"
       loop: "{{ velveta_runner_services }}"
       register: velveta_runner_execs
-
-    - name: Deploy runner systemd service units when runner files exist
-      ansible.builtin.template:
-        src: "{{ velveta_paths.infra_root }}/templates/actions-runner.service.j2"
-        dest: "/etc/systemd/system/{{ item.item.name }}"
-        mode: "0644"
-      loop: "{{ velveta_runner_execs.results }}"
-      when: item.stat.exists
-      notify: Reload systemd
-
-    - name: Flush systemd handlers before enabling units
-      ansible.builtin.meta: flush_handlers
 
     - name: Enable backup timer
       ansible.builtin.systemd:

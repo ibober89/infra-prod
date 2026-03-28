@@ -35,6 +35,14 @@ if [ -d "{{ velveta_paths.runner_frontendx_root }}" ]; then
   tar -czf "${target_dir}/system/actions-runner-frontendx.tgz" -C /opt actions-runner-frontendx
 fi
 
+if [ -d "{{ velveta_paths.runner_ecommerce_root }}" ]; then
+  tar -czf "${target_dir}/system/actions-runner-ecommerce.tgz" -C /opt actions-runner-ecommerce
+fi
+
+if [ -f /etc/systemd/system/actions.runner.ibober89-ecommerce.vm519642-ecommerce.service ]; then
+  cp /etc/systemd/system/actions.runner.ibober89-ecommerce.vm519642-ecommerce.service "${target_dir}/system/"
+fi
+
 if [ -f /etc/systemd/system/actions.runner.ibober89-frontendX.vm519642-frontendx.service ]; then
   cp /etc/systemd/system/actions.runner.ibober89-frontendX.vm519642-frontendx.service "${target_dir}/system/"
 fi

@@ -15,6 +15,7 @@ velveta_paths:
   prod_frappe_root: /opt/velveta/prod/frappe
   prod_nextjs_root: /opt/velveta/prod/nextjs
   prod_frappe_image_root: /opt/velveta/prod/frappe/image
+  runner_ecommerce_root: /opt/actions-runner-ecommerce
   runner_frontendx_root: /opt/actions-runner-frontendx
 
 velveta_compose_targets:
@@ -78,6 +79,13 @@ velveta_runner:
     arm64: arm64
 
 velveta_runner_services:
+  - name: actions.runner.ibober89-ecommerce.vm519642-ecommerce.service
+    description: GitHub Actions Runner (ibober89-ecommerce.vm519642-ecommerce)
+    working_directory: /opt/actions-runner-ecommerce
+    github_owner: ibober89
+    github_repo: ecommerce
+    runner_name: vm519642-ecommerce
+    runner_labels: self-hosted,Linux,X64,prod,ecommerce
   - name: actions.runner.ibober89-frontendX.vm519642-frontendx.service
     description: GitHub Actions Runner (ibober89-frontendX.vm519642-frontendx)
     working_directory: /opt/actions-runner-frontendx
