@@ -276,28 +276,23 @@
 
     - name: Build production Next.js image
       ansible.builtin.shell: |
-        cd {{ velveta_paths.prod_root }}
+        cd {{ velveta_paths.prod_nextjs_root }}
         docker build \
           --build-arg FRONTEND_REPO_URL={{ velveta_repos.frontend.url }} \
           --build-arg FRONTEND_REPO_BRANCH={{ velveta_repos.frontend.version }} \
           -t velveta-nextjs-prod:latest \
-          -f {{ velveta_paths.prod_root }}/Dockerfile.nextjs \
-          {{ velveta_paths.prod_root }}
+          -f {{ velveta_paths.prod_nextjs_dockerfile }} \
+          {{ velveta_paths.prod_nextjs_root }}
       args:
         executable: /bin/bash
       changed_when: true
-
-    - name: Ensure no persistent production Next.js source checkout remains on the host
-      ansible.builtin.file:
-        path: "{{ velveta_paths.prod_nextjs_root }}"
-        state: absent
 
     - name: Initialize fresh production Frappe site
       ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/init-fresh-prod.sh"
       args:
         executable: /bin/bash
       environment:
-        PROD_ROOT: "{{ velveta_paths.prod_root }}"
+        PROD_ROOT: "{{ velveta_paths.prod_frappe_root }}"
         FRAPPE_COMPOSE_FILE: "{{ velveta_compose_targets.prod_frappe }}"
         SITE_NAME: "{{ velveta_sites.prod }}"
       changed_when: true
@@ -324,7 +319,7 @@
 
     - name: Start production Next.js stack
       ansible.builtin.shell: |
-        cd {{ velveta_paths.prod_root }}
+        cd {{ velveta_paths.prod_nextjs_root }}
         docker compose -f {{ velveta_compose_targets.prod_nextjs }} up -d
       args:
         executable: /bin/bash

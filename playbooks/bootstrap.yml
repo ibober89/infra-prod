@@ -18,6 +18,7 @@
         - "{{ velveta_root }}"
         - "{{ velveta_paths.prod_root }}"
         - "{{ velveta_paths.prod_root }}/frappe"
+        - "{{ velveta_paths.prod_nextjs_root }}"
         - "{{ velveta_paths.prod_frappe_image_root }}"
         - "{{ velveta_paths.prod_frappe_image_root }}/resources"
         - "{{ velveta_paths.prod_frappe_image_root }}/resources/core"
@@ -32,7 +33,7 @@
     - name: Deploy prod env file
       ansible.builtin.template:
         src: "{{ velveta_paths.infra_root }}/templates/prod.env.j2"
-        dest: "{{ velveta_paths.prod_env_file }}"
+        dest: "{{ velveta_paths.prod_frappe_env_file }}"
         owner: root
         group: "{{ velveta_users.runner }}"
         mode: "0640"
@@ -48,7 +49,7 @@
     - name: Deploy prod Frappe env file
       ansible.builtin.template:
         src: "{{ velveta_paths.infra_root }}/templates/frappe.env.j2"
-        dest: "{{ velveta_paths.prod_root }}/frappe/.env"
+        dest: "{{ velveta_paths.prod_frappe_runtime_env_file }}"
         mode: "0644"
 
     - name: Deploy prod Frappe compose
@@ -72,14 +73,27 @@
     - name: Deploy prod Next.js Dockerfile
       ansible.builtin.copy:
         src: "{{ velveta_paths.infra_root }}/files/prod/Dockerfile.nextjs"
-        dest: "{{ velveta_paths.prod_root }}/Dockerfile.nextjs"
+        dest: "{{ velveta_paths.prod_nextjs_dockerfile }}"
         mode: "0644"
 
     - name: Deploy prod Next.js dockerignore
       ansible.builtin.copy:
         src: "{{ velveta_paths.infra_root }}/files/prod/.dockerignore"
-        dest: "{{ velveta_paths.prod_root }}/.dockerignore"
+        dest: "{{ velveta_paths.prod_nextjs_dockerignore }}"
         mode: "0644"
+
+    - name: Remove legacy prod-root files now managed inside app folders
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ velveta_paths.prod_root }}/.env"
+        - "{{ velveta_paths.prod_root }}/nextjs.env"
+        - "{{ velveta_paths.prod_root }}/Dockerfile.nextjs"
+        - "{{ velveta_paths.prod_root }}/.dockerignore"
+        - "{{ velveta_paths.prod_root }}/docker-compose.frappe.yml"
+        - "{{ velveta_paths.prod_root }}/docker-compose.nextjs.yml"
+        - "{{ velveta_paths.prod_root }}/.fresh-bootstrap-complete"
 
     - name: Deploy prod Frappe image Containerfile
       ansible.builtin.copy:

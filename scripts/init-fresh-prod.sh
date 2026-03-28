@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${PROD_ROOT:=/opt/velveta/prod}"
-: "${FRAPPE_COMPOSE_FILE:=/opt/velveta/prod/docker-compose.frappe.yml}"
+: "${PROD_ROOT:=/opt/velveta/prod/frappe}"
+: "${FRAPPE_COMPOSE_FILE:=/opt/velveta/prod/frappe/docker-compose.frappe.yml}"
 : "${SITE_NAME:=erp.velvetacare.com}"
 MARKER_FILE="${PROD_ROOT}/.fresh-bootstrap-complete"
 

@@ -12,17 +12,21 @@ velveta_paths:
   infra_root: /opt/velveta/infra-prod
   backups_root: /opt/velveta/backups
   secrets_root: /opt/velveta/infra-prod/.secrets
-  prod_env_file: /opt/velveta/prod/.env
-  prod_nextjs_env_file: /opt/velveta/prod/nextjs.env
   prod_frappe_root: /opt/velveta/prod/frappe
   prod_nextjs_root: /opt/velveta/prod/nextjs
+  prod_frappe_env_file: /opt/velveta/prod/frappe/.env
+  prod_frappe_runtime_env_file: /opt/velveta/prod/frappe/frappe.env
+  prod_frappe_marker_file: /opt/velveta/prod/frappe/.fresh-bootstrap-complete
   prod_frappe_image_root: /opt/velveta/prod/frappe/image
+  prod_nextjs_env_file: /opt/velveta/prod/nextjs/nextjs.env
+  prod_nextjs_dockerfile: /opt/velveta/prod/nextjs/Dockerfile.nextjs
+  prod_nextjs_dockerignore: /opt/velveta/prod/nextjs/.dockerignore
   runner_ecommerce_root: /opt/actions-runner-ecommerce
   runner_frontendx_root: /opt/actions-runner-frontendx
 
 velveta_compose_targets:
-  prod_frappe: /opt/velveta/prod/docker-compose.frappe.yml
-  prod_nextjs: /opt/velveta/prod/docker-compose.nextjs.yml
+  prod_frappe: /opt/velveta/prod/frappe/docker-compose.frappe.yml
+  prod_nextjs: /opt/velveta/prod/nextjs/docker-compose.nextjs.yml
   nginx: /opt/velveta/nginx/docker-compose.yml
 
 velveta_domains:

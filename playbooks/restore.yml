@@ -118,8 +118,8 @@
       ansible.builtin.shell: |
         docker build \
           -t velveta-nextjs-prod:latest \
-          -f {{ velveta_paths.prod_root }}/Dockerfile.nextjs \
-          {{ velveta_paths.prod_root }}
+          -f {{ velveta_paths.prod_nextjs_dockerfile }} \
+          {{ velveta_paths.prod_nextjs_root }}
       args:
         executable: /bin/bash
       changed_when: true
