@@ -18,4 +18,5 @@ docker compose -f "${FRAPPE_COMPOSE_FILE}" up --abort-on-container-exit --exit-c
 docker compose -f "${FRAPPE_COMPOSE_FILE}" up -d
 docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend \
   bash -lc "test -f sites/${SITE_NAME}/site_config.json && bench --site ${SITE_NAME} migrate"
+docker compose -f "${FRAPPE_COMPOSE_FILE}" rm -f -s -v create-site configurator || true
 touch "${MARKER_FILE}"

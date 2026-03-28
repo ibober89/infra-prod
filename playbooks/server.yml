@@ -406,3 +406,13 @@
       retries: 12
       delay: 10
       until: velveta_verify_nextjs.status in [200, 301, 302, 303, 307, 308]
+
+    - name: Prune stale Docker caches and unused objects
+      ansible.builtin.shell: |
+        docker container prune -f || true
+        docker image prune -f || true
+        docker volume prune -f || true
+        docker builder prune -af --filter 'until=24h' || true
+      args:
+        executable: /bin/bash
+      changed_when: true
