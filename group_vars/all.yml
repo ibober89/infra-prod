@@ -11,8 +11,10 @@ velveta_paths:
   nginx_root: /opt/velveta/nginx
   infra_root: /opt/velveta/infra-prod
   backups_root: /opt/velveta/backups
+  secrets_root: /opt/velveta/infra-prod/.secrets
   prod_frappe_root: /opt/velveta/prod/frappe
   prod_nextjs_root: /opt/velveta/prod/nextjs
+  prod_frappe_image_root: /opt/velveta/prod/frappe/image
   runner_frontendx_root: /opt/actions-runner-frontendx
 
 velveta_compose_targets:
@@ -34,7 +36,28 @@ velveta_sites:
   prod: erp.velvetacare.com
 
 velveta_db:
-  root_password: "123"
+  root_password_file: /opt/velveta/infra-prod/.secrets/db_root_password
+  admin_password_file: /opt/velveta/infra-prod/.secrets/site_admin_password
+
+velveta_repos:
+  frontend:
+    url: https://github.com/ibober89/frontendX.git
+    version: main
+  ecommerce:
+    url: https://github.com/ibober89/ecommerce.git
+    version: main
+  frappe:
+    url: https://github.com/frappe/frappe
+    version: version-16
+
+velveta_nextjs:
+  base_url: https://velvetacare.com
+  ecommerce_price_list: ""
+  ahlpay_merchant_id: ""
+  ahlpay_user_code: ""
+  ahlpay_email: ""
+  ahlpay_password: ""
+  ahlpay_environment: https://developer.ahlpay.com.tr
 
 velveta_backup:
   retention_days: 1

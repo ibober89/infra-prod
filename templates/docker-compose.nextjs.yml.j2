@@ -1,0 +1,31 @@
+name: nextjs
+
+services:
+  web:
+    image: velveta-nextjs-prod:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      ERPNEXT_URL: ${ERPNEXT_URL}
+      ERP_HOST_HEADER: ${ERP_HOST_HEADER}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+      ECOMMERCE_PRICE_LIST: ${ECOMMERCE_PRICE_LIST}
+      ERPNEXT_API_KEY: ${ERPNEXT_API_KEY}
+      ERPNEXT_API_SECRET: ${ERPNEXT_API_SECRET}
+      AHLPAY_MERCHANT_ID: ${AHLPAY_MERCHANT_ID}
+      AHLPAY_USER_CODE: ${AHLPAY_USER_CODE}
+      AHLPAY_EMAIL: ${AHLPAY_EMAIL}
+      AHLPAY_PASSWORD: ${AHLPAY_PASSWORD}
+      AHLPAY_ENVIRONMENT: ${AHLPAY_ENVIRONMENT}
+    networks:
+      default:
+        aliases:
+          - nextjs-prod
+      frappe_net:
+
+networks:
+  frappe_net:
+    external: true
+    name: frappe_default

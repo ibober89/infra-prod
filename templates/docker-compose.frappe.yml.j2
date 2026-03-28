@@ -1,0 +1,302 @@
+name: frappe
+
+services:
+  backend:
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+        required: true
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  configurator:
+    command:
+      - |
+        ls -1 apps > sites/apps.txt;
+        bench set-config -g db_host $$DB_HOST;
+        bench set-config -gp db_port $$DB_PORT;
+        bench set-config -g redis_cache "redis://$$REDIS_CACHE";
+        bench set-config -g redis_queue "redis://$$REDIS_QUEUE";
+        bench set-config -g redis_socketio "redis://$$REDIS_QUEUE";
+        bench set-config -gp socketio_port $$SOCKETIO_PORT;
+        bench set-config -g chromium_path /usr/bin/chromium-headless-shell;
+    depends_on:
+      db:
+        condition: service_healthy
+        required: true
+      redis-cache:
+        condition: service_started
+        required: true
+      redis-queue:
+        condition: service_started
+        required: true
+    entrypoint:
+      - bash
+      - -c
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      SOCKETIO_PORT: "9000"
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: on-failure
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  create-site:
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+        required: true
+    entrypoint:
+      - bash
+      - -lc
+    command:
+      - |
+        wait-for-it -t 120 db:3306;
+        wait-for-it -t 120 redis-cache:6379;
+        wait-for-it -t 120 redis-queue:6379;
+        if [ -f sites/${VELVETA_SITE_NAME}/site_config.json ]; then
+          echo "Site ${VELVETA_SITE_NAME} already exists.";
+          exit 0;
+        fi;
+        bench new-site --mariadb-user-host-login-scope='%' --admin-password=${VELVETA_SITE_ADMIN_PASSWORD} --db-root-username=root --db-root-password=${VELVETA_DB_ROOT_PASSWORD} --install-app erpnext --install-app payments --install-app ecommerce --set-default ${VELVETA_SITE_NAME};
+        bench --site ${VELVETA_SITE_NAME} set-config host_name https://${VELVETA_ERP_DOMAIN};
+        bench --site ${VELVETA_SITE_NAME} clear-cache;
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: "no"
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  db:
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+    environment:
+      MARIADB_AUTO_UPGRADE: "1"
+      MYSQL_ROOT_PASSWORD: ${VELVETA_DB_ROOT_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${VELVETA_DB_ROOT_PASSWORD}
+      MARIADB_ROOT_HOST: "%"
+    healthcheck:
+      test:
+        - CMD
+        - healthcheck.sh
+        - --connect
+        - --innodb_initialized
+      timeout: 5s
+      interval: 5s
+      retries: 20
+      start_period: 10s
+    image: mariadb:11.8
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: db-data
+        target: /var/lib/mysql
+        volume: {}
+
+  frontend:
+    command:
+      - nginx-entrypoint.sh
+    depends_on:
+      backend:
+        condition: service_started
+        required: true
+      websocket:
+        condition: service_started
+        required: true
+    environment:
+      BACKEND: backend:8000
+      CLIENT_MAX_BODY_SIZE: 50m
+      FRAPPE_SITE_NAME_HEADER: ${VELVETA_SITE_NAME}
+      PROXY_READ_TIMEOUT: "120"
+      SOCKETIO: websocket:9000
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  queue-long:
+    command:
+      - bench
+      - worker
+      - --queue
+      - long,default,short
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+        required: true
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  queue-short:
+    command:
+      - bench
+      - worker
+      - --queue
+      - short,default
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+        required: true
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  redis-cache:
+    image: redis:6.2-alpine
+    networks:
+      default: null
+    restart: unless-stopped
+
+  redis-queue:
+    image: redis:6.2-alpine
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: redis-queue-data
+        target: /data
+        volume: {}
+
+  scheduler:
+    command:
+      - bench
+      - schedule
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+        required: true
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+  websocket:
+    command:
+      - node
+      - /home/frappe/frappe-bench/apps/frappe/socketio.js
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+        required: true
+    image: velveta-frappe-prod:16
+    networks:
+      default: null
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: sites
+        target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
+
+networks:
+  default:
+    name: frappe_default
+
+volumes:
+  db-data:
+    name: frappe_db-data
+  redis-queue-data:
+    name: frappe_redis-queue-data
+  sites:
+    name: frappe_sites
+  logs:
+    name: frappe_logs

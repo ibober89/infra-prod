@@ -10,7 +10,7 @@ target_dir="${backup_root}/${timestamp}"
 mkdir -p "${target_dir}/prod" "${target_dir}/system"
 
 if docker ps --format '{{"{{"}}.Names{{"}}"}}' | grep -qx 'frappe-db-1'; then
-  docker exec frappe-db-1 mariadb-dump -uroot -p{{ velveta_db.root_password }} --all-databases > "${target_dir}/prod/prod-frappe-db.sql"
+  docker exec frappe-db-1 mariadb-dump -uroot -p{{ velveta_db_root_password }} --all-databases > "${target_dir}/prod/prod-frappe-db.sql"
 fi
 
 if docker volume inspect frappe_sites >/dev/null 2>&1; then
@@ -26,22 +26,13 @@ if [ -d "{{ velveta_paths.prod_nextjs_root }}" ]; then
 fi
 
 tar -czf "${target_dir}/system/nginx-config.tgz" -C "{{ velveta_root }}" nginx
-tar -czf "${target_dir}/system/infra-config.tgz" -C "{{ velveta_root }}" infra
-
-if [ -d "{{ velveta_paths.runner_ecommerce_root }}" ]; then
-  tar -czf "${target_dir}/system/actions-runner-ecommerce.tgz" -C /opt actions-runner-ecommerce
-fi
+tar \
+  --exclude='infra-prod/.git' \
+  -czf "${target_dir}/system/infra-config.tgz" \
+  -C "{{ velveta_root }}" infra-prod
 
 if [ -d "{{ velveta_paths.runner_frontendx_root }}" ]; then
   tar -czf "${target_dir}/system/actions-runner-frontendx.tgz" -C /opt actions-runner-frontendx
-fi
-
-if [ -d /home/{{ velveta_users.erp_dev }}/.ssh ]; then
-  tar -czf "${target_dir}/system/erpdev-ssh.tgz" -C /home/{{ velveta_users.erp_dev }} .ssh
-fi
-
-if [ -f /etc/systemd/system/actions.runner.ibober89-ecommerce.vm519642.service ]; then
-  cp /etc/systemd/system/actions.runner.ibober89-ecommerce.vm519642.service "${target_dir}/system/"
 fi
 
 if [ -f /etc/systemd/system/actions.runner.ibober89-frontendX.vm519642-frontendx.service ]; then

@@ -4,6 +4,9 @@
   gather_facts: true
   vars_files:
     - ../group_vars/all.yml
+  vars:
+    velveta_db_root_password: "{{ lookup('password', velveta_db.root_password_file + ' length=32 chars=ascii_letters,digits') }}"
+    velveta_site_admin_password: "{{ lookup('password', velveta_db.admin_password_file + ' length=32 chars=ascii_letters,digits') }}"
 
   tasks:
     - name: Ensure base directories for prod exist
@@ -15,33 +18,38 @@
         - "{{ velveta_root }}"
         - "{{ velveta_paths.prod_root }}"
         - "{{ velveta_paths.prod_root }}/frappe"
+        - "{{ velveta_paths.prod_frappe_image_root }}"
+        - "{{ velveta_paths.prod_frappe_image_root }}/resources"
+        - "{{ velveta_paths.prod_frappe_image_root }}/resources/core"
+        - "{{ velveta_paths.prod_frappe_image_root }}/resources/core/nginx"
         - "{{ velveta_paths.nginx_root }}"
         - "{{ velveta_paths.nginx_root }}/conf.d"
         - "{{ velveta_paths.nginx_root }}/sites-enabled"
         - "{{ velveta_paths.nginx_root }}/ssl"
         - "{{ velveta_paths.backups_root }}"
+        - "{{ velveta_paths.secrets_root }}"
 
     - name: Deploy prod env file
-      ansible.builtin.copy:
-        src: "{{ velveta_paths.infra_root }}/files/prod/.env"
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/prod.env.j2"
         dest: "{{ velveta_paths.prod_root }}/.env"
         mode: "0640"
 
     - name: Deploy prod Frappe env file
-      ansible.builtin.copy:
-        src: "{{ velveta_paths.infra_root }}/files/prod/frappe.env"
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/frappe.env.j2"
         dest: "{{ velveta_paths.prod_root }}/frappe/.env"
         mode: "0644"
 
     - name: Deploy prod Frappe compose
-      ansible.builtin.copy:
-        src: "{{ velveta_paths.infra_root }}/files/prod/docker-compose.frappe.yml"
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/docker-compose.frappe.yml.j2"
         dest: "{{ velveta_compose_targets.prod_frappe }}"
         mode: "0644"
 
     - name: Deploy prod Next.js compose
-      ansible.builtin.copy:
-        src: "{{ velveta_paths.infra_root }}/files/prod/docker-compose.nextjs.yml"
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/docker-compose.nextjs.yml.j2"
         dest: "{{ velveta_compose_targets.prod_nextjs }}"
         mode: "0644"
 
@@ -62,6 +70,22 @@
         src: "{{ velveta_paths.infra_root }}/files/prod/.dockerignore"
         dest: "{{ velveta_paths.prod_root }}/.dockerignore"
         mode: "0644"
+
+    - name: Deploy prod Frappe image Containerfile
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/frappe-image/Containerfile"
+        dest: "{{ velveta_paths.prod_frappe_image_root }}/Containerfile"
+        mode: "0644"
+
+    - name: Deploy prod Frappe image nginx helper files
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/prod/frappe-image/resources/core/nginx/{{ item }}"
+        dest: "{{ velveta_paths.prod_frappe_image_root }}/resources/core/nginx/{{ item }}"
+        mode: "0644"
+      loop:
+        - nginx-entrypoint.sh
+        - nginx-template.conf
+        - security_headers.conf
 
     - name: Deploy nginx compose
       ansible.builtin.copy:

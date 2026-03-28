@@ -6,6 +6,9 @@
   gather_facts: true
   vars_files:
     - ../group_vars/all.yml
+  vars:
+    velveta_db_root_password: "{{ lookup('password', velveta_db.root_password_file + ' length=32 chars=ascii_letters,digits') }}"
+    velveta_site_admin_password: "{{ lookup('password', velveta_db.admin_password_file + ' length=32 chars=ascii_letters,digits') }}"
 
   handlers:
     - name: Reload systemd
@@ -166,6 +169,147 @@
       args:
         executable: /bin/bash
       loop:
+        - user: root
+          path: /opt/velveta/prod/nextjs
         - user: github-runner
           path: /opt/velveta/prod/nextjs
+        - user: frontend
+          path: /opt/velveta/prod/nextjs
       changed_when: false
+
+    - name: Check whether the production frontend directory is already a git repo
+      ansible.builtin.stat:
+        path: "{{ velveta_paths.prod_nextjs_root }}/.git"
+      register: velveta_frontend_git_dir
+
+    - name: Reset the production frontend directory when it is not a git repo yet
+      ansible.builtin.file:
+        path: "{{ velveta_paths.prod_nextjs_root }}"
+        state: absent
+      when: not velveta_frontend_git_dir.stat.exists
+
+    - name: Recreate the production frontend directory
+      ansible.builtin.file:
+        path: "{{ velveta_paths.prod_nextjs_root }}"
+        state: directory
+        owner: "{{ velveta_users.frontend_dev }}"
+        group: "{{ velveta_users.frontend_dev }}"
+        mode: "2775"
+      when: not velveta_frontend_git_dir.stat.exists
+
+    - name: Sync production frontend source
+      ansible.builtin.git:
+        repo: "{{ velveta_repos.frontend.url }}"
+        dest: "{{ velveta_paths.prod_nextjs_root }}"
+        version: "{{ velveta_repos.frontend.version }}"
+        force: true
+        update: true
+
+    - name: Ensure prod helper scripts are executable
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "0755"
+      loop:
+        - "{{ velveta_paths.infra_root }}/scripts/build-prod-frappe-image.sh"
+        - "{{ velveta_paths.infra_root }}/scripts/init-fresh-prod.sh"
+
+    - name: Build production Frappe image
+      ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/build-prod-frappe-image.sh"
+      args:
+        executable: /bin/bash
+      environment:
+        APPS_JSON_PATH: "{{ velveta_paths.prod_frappe_root }}/apps.json"
+        FRAPPE_IMAGE_ROOT: "{{ velveta_paths.prod_frappe_image_root }}"
+        FRAPPE_IMAGE_TAG: "velveta-frappe-prod:16"
+        FRAPPE_REPO_URL: "{{ velveta_repos.frappe.url }}"
+        FRAPPE_REPO_BRANCH: "{{ velveta_repos.frappe.version }}"
+      changed_when: true
+
+    - name: Build production Next.js image
+      ansible.builtin.shell: |
+        cd {{ velveta_paths.prod_root }}
+        docker build \
+          -t velveta-nextjs-prod:latest \
+          -f {{ velveta_paths.prod_root }}/Dockerfile.nextjs \
+          {{ velveta_paths.prod_root }}
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Initialize fresh production Frappe site
+      ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/init-fresh-prod.sh"
+      args:
+        executable: /bin/bash
+      environment:
+        PROD_ROOT: "{{ velveta_paths.prod_root }}"
+        FRAPPE_COMPOSE_FILE: "{{ velveta_compose_targets.prod_frappe }}"
+        SITE_NAME: "{{ velveta_sites.prod }}"
+      changed_when: true
+
+    - name: Stop production nginx before recreating the Next.js network
+      ansible.builtin.shell: |
+        cd {{ velveta_paths.nginx_root }}
+        docker compose -f {{ velveta_compose_targets.nginx }} down || true
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Remove stale unmanaged nextjs network from previous manual runs
+      ansible.builtin.shell: |
+        if docker network inspect nextjs_default >/dev/null 2>&1; then
+          current_label="$(docker network inspect -f '{{ "{{" }} index .Labels "com.docker.compose.network" {{ "}}" }}' nextjs_default)"
+          if [ "${current_label}" != "default" ]; then
+            docker network rm nextjs_default
+          fi
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Start production Next.js stack
+      ansible.builtin.shell: |
+        cd {{ velveta_paths.prod_root }}
+        docker compose -f {{ velveta_compose_targets.prod_nextjs }} up -d
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Start production nginx stack
+      ansible.builtin.shell: |
+        cd {{ velveta_paths.nginx_root }}
+        docker compose -f {{ velveta_compose_targets.nginx }} up -d
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Verify production Frappe endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ velveta_ports.erp_prod }}"
+        method: GET
+        status_code:
+          - 200
+          - 301
+          - 302
+          - 303
+          - 307
+          - 308
+      register: velveta_verify_frappe
+      retries: 12
+      delay: 10
+      until: velveta_verify_frappe.status in [200, 301, 302, 303, 307, 308]
+
+    - name: Verify production Next.js endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ velveta_ports.nextjs_prod }}"
+        method: GET
+        status_code:
+          - 200
+          - 301
+          - 302
+          - 303
+          - 307
+          - 308
+      register: velveta_verify_nextjs
+      retries: 12
+      delay: 10
+      until: velveta_verify_nextjs.status in [200, 301, 302, 303, 307, 308]
