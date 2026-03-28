@@ -66,3 +66,22 @@ velveta_backup:
 
 velveta_restore:
   backup_dir: /opt/velveta/backups/latest
+
+velveta_runner:
+  version: 2.328.0
+  github_api_base: https://api.github.com
+  github_pat_file: /opt/velveta/infra-prod/.secrets/github_runner_pat
+  package_arch_map:
+    x86_64: x64
+    amd64: x64
+    aarch64: arm64
+    arm64: arm64
+
+velveta_runner_services:
+  - name: actions.runner.ibober89-frontendX.vm519642-frontendx.service
+    description: GitHub Actions Runner (ibober89-frontendX.vm519642-frontendx)
+    working_directory: /opt/actions-runner-frontendx
+    github_owner: ibober89
+    github_repo: frontendX
+    runner_name: vm519642-frontendx
+    runner_labels: self-hosted,Linux,X64,prod,frontendx

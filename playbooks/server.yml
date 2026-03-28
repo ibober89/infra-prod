@@ -23,6 +23,7 @@
           - curl
           - rsync
           - acl
+          - unzip
         state: present
         update_cache: true
 
@@ -126,13 +127,86 @@
         mode: "0644"
       notify: Reload systemd
 
+    - name: Check whether GitHub runner PAT file exists
+      ansible.builtin.stat:
+        path: "{{ velveta_runner.github_pat_file }}"
+      register: velveta_runner_pat_file
+
+    - name: Stop when GitHub runner PAT file is missing
+      ansible.builtin.assert:
+        that:
+          - velveta_runner_pat_file.stat.exists
+        fail_msg: "Missing GitHub runner PAT file at {{ velveta_runner.github_pat_file }}"
+
+    - name: Read GitHub runner PAT
+      ansible.builtin.slurp:
+        src: "{{ velveta_runner.github_pat_file }}"
+      register: velveta_runner_pat
+      no_log: true
+
+    - name: Derive GitHub runner package architecture
+      ansible.builtin.set_fact:
+        velveta_runner_package_arch: "{{ velveta_runner.package_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+
+    - name: Download GitHub Actions runner bundles
+      ansible.builtin.get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ velveta_runner.version }}/actions-runner-linux-{{ velveta_runner_package_arch }}-{{ velveta_runner.version }}.tar.gz"
+        dest: "/tmp/actions-runner-linux-{{ velveta_runner_package_arch }}-{{ velveta_runner.version }}.tar.gz"
+        mode: "0644"
+
+    - name: Check whether runner configuration already exists
+      ansible.builtin.stat:
+        path: "{{ item.working_directory }}/.runner"
+      loop: "{{ velveta_runner_services }}"
+      register: velveta_runner_configs
+
+    - name: Unpack GitHub runner bundle into each runner directory
+      ansible.builtin.unarchive:
+        src: "/tmp/actions-runner-linux-{{ velveta_runner_package_arch }}-{{ velveta_runner.version }}.tar.gz"
+        dest: "{{ item.item.working_directory }}"
+        remote_src: true
+        owner: "{{ velveta_users.runner }}"
+        group: "{{ velveta_users.runner }}"
+      loop: "{{ velveta_runner_configs.results }}"
+      when: not item.stat.exists
+
+    - name: Request GitHub runner registration tokens
+      ansible.builtin.uri:
+        url: "{{ velveta_runner.github_api_base }}/repos/{{ item.item.github_owner }}/{{ item.item.github_repo }}/actions/runners/registration-token"
+        method: POST
+        headers:
+          Accept: application/vnd.github+json
+          Authorization: "Bearer {{ velveta_runner_pat.content | b64decode | trim }}"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 201
+        return_content: true
+      loop: "{{ velveta_runner_configs.results }}"
+      when: not item.stat.exists
+      register: velveta_runner_registration_tokens
+      no_log: true
+
+    - name: Configure GitHub runners
+      become_user: "{{ velveta_users.runner }}"
+      ansible.builtin.shell: |
+        ./config.sh \
+          --url https://github.com/{{ item.item.github_owner }}/{{ item.item.github_repo }} \
+          --token {{ item.json.token }} \
+          --name {{ item.item.runner_name }} \
+          --labels {{ item.item.runner_labels }} \
+          --work _work \
+          --unattended \
+          --replace
+      args:
+        chdir: "{{ item.item.working_directory }}"
+        executable: /bin/bash
+      loop: "{{ velveta_runner_registration_tokens.results }}"
+      when: not item.item.stat.exists
+      no_log: true
+
     - name: Check whether runner service executables exist
       ansible.builtin.stat:
         path: "{{ item.working_directory }}/runsvc.sh"
-      loop:
-        - name: actions.runner.ibober89-frontendX.vm519642-frontendx.service
-          description: GitHub Actions Runner (ibober89-frontendX.vm519642-frontendx)
-          working_directory: /opt/actions-runner-frontendx
+      loop: "{{ velveta_runner_services }}"
       register: velveta_runner_execs
 
     - name: Deploy runner systemd service units when runner files exist
