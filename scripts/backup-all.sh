@@ -21,10 +21,6 @@ if docker volume inspect frappe_sites >/dev/null 2>&1; then
     sh -lc 'tar -czf /backup/prod-frappe-sites-volume.tgz -C /src .'
 fi
 
-if [ -d "/opt/velveta/prod/nextjs" ]; then
-  tar -czf "${target_dir}/prod/prod-nextjs-src.tgz" -C "/opt/velveta/prod" nextjs
-fi
-
 tar -czf "${target_dir}/system/nginx-config.tgz" -C "/opt/velveta" nginx
 tar \
   --exclude='infra-prod/.git' \

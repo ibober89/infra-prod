@@ -254,50 +254,6 @@
       loop: "{{ velveta_runner_execs.results }}"
       when: item.stat.exists
 
-    - name: Ensure git safe directories are configured for prod repos
-      become_user: "{{ item.user }}"
-      ansible.builtin.shell: |
-        git config --global --get-all safe.directory | grep -Fx "{{ item.path }}" >/dev/null || \
-        git config --global --add safe.directory "{{ item.path }}"
-      args:
-        executable: /bin/bash
-      loop:
-        - user: root
-          path: /opt/velveta/prod/nextjs
-        - user: github-runner
-          path: /opt/velveta/prod/nextjs
-        - user: frontend
-          path: /opt/velveta/prod/nextjs
-      changed_when: false
-
-    - name: Check whether the production frontend directory is already a git repo
-      ansible.builtin.stat:
-        path: "{{ velveta_paths.prod_nextjs_root }}/.git"
-      register: velveta_frontend_git_dir
-
-    - name: Reset the production frontend directory when it is not a git repo yet
-      ansible.builtin.file:
-        path: "{{ velveta_paths.prod_nextjs_root }}"
-        state: absent
-      when: not velveta_frontend_git_dir.stat.exists
-
-    - name: Recreate the production frontend directory
-      ansible.builtin.file:
-        path: "{{ velveta_paths.prod_nextjs_root }}"
-        state: directory
-        owner: "{{ velveta_users.frontend_dev }}"
-        group: "{{ velveta_users.frontend_dev }}"
-        mode: "2775"
-      when: not velveta_frontend_git_dir.stat.exists
-
-    - name: Sync production frontend source
-      ansible.builtin.git:
-        repo: "{{ velveta_repos.frontend.url }}"
-        dest: "{{ velveta_paths.prod_nextjs_root }}"
-        version: "{{ velveta_repos.frontend.version }}"
-        force: true
-        update: true
-
     - name: Ensure prod helper scripts are executable
       ansible.builtin.file:
         path: "{{ item }}"
@@ -322,12 +278,19 @@
       ansible.builtin.shell: |
         cd {{ velveta_paths.prod_root }}
         docker build \
+          --build-arg FRONTEND_REPO_URL={{ velveta_repos.frontend.url }} \
+          --build-arg FRONTEND_REPO_BRANCH={{ velveta_repos.frontend.version }} \
           -t velveta-nextjs-prod:latest \
           -f {{ velveta_paths.prod_root }}/Dockerfile.nextjs \
           {{ velveta_paths.prod_root }}
       args:
         executable: /bin/bash
       changed_when: true
+
+    - name: Ensure no persistent production Next.js source checkout remains on the host
+      ansible.builtin.file:
+        path: "{{ velveta_paths.prod_nextjs_root }}"
+        state: absent
 
     - name: Initialize fresh production Frappe site
       ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/init-fresh-prod.sh"
