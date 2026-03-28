@@ -53,6 +53,15 @@ velveta_repos:
     url: https://github.com/frappe/frappe
     version: version-16
 
+velveta_nextjs:
+  site_url: "https://{{ velveta_domains.nextjs_prod[0] }}"
+  ecommerce_price_list: ""
+  erpnext_api_key: ""
+  erpnext_api_secret: ""
+
+velveta_frappe:
+  letsencrypt_email: ""
+
 velveta_backup:
   retention_days: 1
   timer_on_calendar: "*-*-* 03:30:00"
