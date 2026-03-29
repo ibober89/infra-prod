@@ -148,6 +148,13 @@
       register: velveta_runner_pat
       no_log: true
 
+    - name: Ensure GitHub runner PAT file is readable by the runner user
+      ansible.builtin.file:
+        path: "{{ velveta_runner.github_pat_file }}"
+        owner: root
+        group: "{{ velveta_users.runner }}"
+        mode: "0640"
+
     - name: Derive GitHub runner package architecture
       ansible.builtin.set_fact:
         velveta_runner_package_arch: "{{ velveta_runner.package_arch_map[ansible_architecture] | default(ansible_architecture) }}"
@@ -276,16 +283,15 @@
 
     - name: Build production Next.js image
       ansible.builtin.shell: |
-        FRONTEND_REPO_SHA="$(git ls-remote git@github.com:ibober89/frontendX.git refs/heads/{{ velveta_repos.frontend.version }} | awk '{print $1}')"
-        cd {{ velveta_paths.prod_nextjs_root }}
+        tmpdir="$(mktemp -d)"
+        trap 'rm -rf "$tmpdir"' EXIT
+        git clone --depth 1 --branch {{ velveta_repos.frontend.version }} git@github.com:ibober89/frontendX.git "$tmpdir"
+        FRONTEND_REPO_SHA="$(git -C "$tmpdir" rev-parse HEAD)"
         docker build \
-          --secret id=github_token,src={{ velveta_runner.github_pat_file }} \
-          --build-arg FRONTEND_REPO_URL={{ velveta_repos.frontend.url }} \
-          --build-arg FRONTEND_REPO_BRANCH={{ velveta_repos.frontend.version }} \
           --build-arg FRONTEND_REPO_SHA="${FRONTEND_REPO_SHA}" \
           -t velveta-nextjs-prod:latest \
           -f {{ velveta_paths.prod_nextjs_dockerfile }} \
-          {{ velveta_paths.prod_nextjs_root }}
+          "$tmpdir"
       args:
         executable: /bin/bash
       changed_when: true

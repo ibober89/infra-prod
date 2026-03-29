@@ -1,31 +1,19 @@
-# syntax=docker/dockerfile:1.6
 FROM node:20-alpine AS base
-
-FROM base AS source
-RUN apk add --no-cache git
-ARG FRONTEND_REPO_URL=https://github.com/ibober89/frontendX.git
-ARG FRONTEND_REPO_BRANCH=main
-ARG FRONTEND_REPO_SHA=unknown
-WORKDIR /src
-RUN --mount=type=secret,id=github_token \
-  token="$(cat /run/secrets/github_token)" && \
-  auth_url="$(printf '%s' "${FRONTEND_REPO_URL}" | sed "s#https://#https://x-access-token:${token}@#")" && \
-  echo "Fetching ${FRONTEND_REPO_BRANCH}@${FRONTEND_REPO_SHA}" && \
-  git clone --depth 1 --branch "${FRONTEND_REPO_BRANCH}" "${auth_url}" nextjs \
-  && rm -rf /src/nextjs/.git
 
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
+ARG FRONTEND_REPO_SHA=unknown
 
 # Install dependencies based on the preferred package manager
-COPY --from=source /src/nextjs/package.json /src/nextjs/package-lock.json* ./
+COPY package.json package-lock.json* ./
 RUN npm install
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=source /src/nextjs/ ./
+COPY . ./
+RUN echo "Building frontend source ${FRONTEND_REPO_SHA}"
 
 # Match the existing production workflow by ignoring lint/type failures during image builds.
 RUN node - <<'EOF'
