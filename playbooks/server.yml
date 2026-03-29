@@ -276,10 +276,13 @@
 
     - name: Build production Next.js image
       ansible.builtin.shell: |
+        FRONTEND_REPO_SHA="$(git ls-remote git@github.com:ibober89/frontendX.git refs/heads/{{ velveta_repos.frontend.version }} | awk '{print $1}')"
         cd {{ velveta_paths.prod_nextjs_root }}
         docker build \
+          --secret id=github_token,src={{ velveta_runner.github_pat_file }} \
           --build-arg FRONTEND_REPO_URL={{ velveta_repos.frontend.url }} \
           --build-arg FRONTEND_REPO_BRANCH={{ velveta_repos.frontend.version }} \
+          --build-arg FRONTEND_REPO_SHA="${FRONTEND_REPO_SHA}" \
           -t velveta-nextjs-prod:latest \
           -f {{ velveta_paths.prod_nextjs_dockerfile }} \
           {{ velveta_paths.prod_nextjs_root }}
