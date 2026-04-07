@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 ARG PYTHON_VERSION=3.14.2
 ARG DEBIAN_BASE=bookworm
 FROM python:${PYTHON_VERSION}-slim-${DEBIAN_BASE} AS base
@@ -106,7 +107,16 @@ USER frappe
 
 ARG FRAPPE_BRANCH=version-16
 ARG FRAPPE_PATH=https://github.com/frappe/frappe
-RUN export APP_INSTALL_ARGS="" && \
+RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
+  export APP_INSTALL_ARGS="" && \
+  export GIT_TOKEN_CONFIGURED="" && \
+  if [ -f /run/secrets/github_pat ]; then \
+    export GITHUB_PAT="$(tr -d '\n' </run/secrets/github_pat)"; \
+    if [ -n "${GITHUB_PAT}" ]; then \
+      git config --global url."https://oauth2:${GITHUB_PAT}@github.com/".insteadOf "https://github.com/" && \
+      export GIT_TOKEN_CONFIGURED=1; \
+    fi; \
+  fi && \
   if [ -n "${APPS_JSON_BASE64}" ]; then \
     export APP_INSTALL_ARGS="--apps_path=/opt/frappe/apps.json"; \
   fi && \
@@ -123,6 +133,9 @@ RUN export APP_INSTALL_ARGS="" && \
   python -c "from pathlib import Path; path = Path('/home/frappe/frappe-bench/apps/ecommerce/ecommerce/hooks.py'); \
 text = path.read_text() if path.exists() else ''; \
 path.write_text(text.replace('required_apps = [\\\"blog\\\"]\\n', '')) if path.exists() else None" && \
+  if [ "${GIT_TOKEN_CONFIGURED}" = "1" ]; then \
+    git config --global --unset-all url."https://oauth2:${GITHUB_PAT}@github.com/".insteadOf; \
+  fi && \
   find apps -mindepth 1 -path "*/.git" | xargs rm -fr
 
 FROM base AS backend

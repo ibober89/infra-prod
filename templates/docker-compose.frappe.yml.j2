@@ -18,6 +18,10 @@ services:
         target: /home/frappe/frappe-bench/sites
         volume: {}
       - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
         source: logs
         target: /home/frappe/frappe-bench/logs
         volume: {}
@@ -64,6 +68,10 @@ services:
         target: /home/frappe/frappe-bench/sites
         volume: {}
       - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
         source: logs
         target: /home/frappe/frappe-bench/logs
         volume: {}
@@ -98,6 +106,10 @@ services:
       - type: volume
         source: sites
         target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
         volume: {}
       - type: volume
         source: logs
@@ -166,6 +178,10 @@ services:
         target: /home/frappe/frappe-bench/sites
         volume: {}
       - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
         source: logs
         target: /home/frappe/frappe-bench/logs
         volume: {}
@@ -192,6 +208,10 @@ services:
         target: /home/frappe/frappe-bench/sites
         volume: {}
       - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
         source: logs
         target: /home/frappe/frappe-bench/logs
         volume: {}
@@ -216,6 +236,10 @@ services:
       - type: volume
         source: sites
         target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
         volume: {}
       - type: volume
         source: logs
@@ -259,6 +283,10 @@ services:
         target: /home/frappe/frappe-bench/sites
         volume: {}
       - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
         source: logs
         target: /home/frappe/frappe-bench/logs
         volume: {}
@@ -283,6 +311,10 @@ services:
         target: /home/frappe/frappe-bench/sites
         volume: {}
       - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
         source: logs
         target: /home/frappe/frappe-bench/logs
         volume: {}
@@ -298,5 +330,7 @@ volumes:
     name: frappe_redis-queue-data
   sites:
     name: frappe_sites
+  assets:
+    name: frappe_assets
   logs:
     name: frappe_logs

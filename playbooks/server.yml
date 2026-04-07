@@ -269,6 +269,19 @@
         - "{{ velveta_paths.infra_root }}/scripts/build-prod-frappe-image.sh"
         - "{{ velveta_paths.infra_root }}/scripts/init-fresh-prod.sh"
 
+    - name: Check whether GitHub runner PAT file exists
+      ansible.builtin.stat:
+        path: "{{ velveta_runner.github_pat_file }}"
+      register: velveta_runner_pat_file
+
+    - name: Ensure GitHub runner PAT file is readable by the runner user
+      ansible.builtin.file:
+        path: "{{ velveta_runner.github_pat_file }}"
+        owner: root
+        group: "{{ velveta_users.runner }}"
+        mode: "0640"
+      when: velveta_runner_pat_file.stat.exists
+
     - name: Build production Frappe image
       ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/build-prod-frappe-image.sh"
       args:
@@ -279,6 +292,7 @@
         FRAPPE_IMAGE_TAG: "velveta-frappe-prod:16"
         FRAPPE_REPO_URL: "{{ velveta_repos.frappe.url }}"
         FRAPPE_REPO_BRANCH: "{{ velveta_repos.frappe.version }}"
+        GITHUB_PAT_FILE: "{{ velveta_runner.github_pat_file }}"
       changed_when: true
 
     - name: Build production Next.js image
