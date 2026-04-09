@@ -59,7 +59,7 @@ velveta_repos:
 
 velveta_nextjs:
   site_url: "https://{{ velveta_domains.nextjs_prod[0] }}"
-  ecommerce_price_list: ""
+  ecommerce_price_list: "B2C"
   erpnext_api_key: ""
   erpnext_api_secret: ""
 
