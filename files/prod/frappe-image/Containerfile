@@ -107,7 +107,9 @@ USER frappe
 
 ARG FRAPPE_BRANCH=version-16
 ARG FRAPPE_PATH=https://github.com/frappe/frappe
+ARG APP_SOURCES_FINGERPRINT=static
 RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
+  test -n "${APP_SOURCES_FINGERPRINT}" && \
   export APP_INSTALL_ARGS="" && \
   export GIT_TOKEN_CONFIGURED="" && \
   if [ -f /run/secrets/github_pat ]; then \
@@ -133,6 +135,11 @@ RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
   python -c "from pathlib import Path; path = Path('/home/frappe/frappe-bench/apps/ecommerce/ecommerce/hooks.py'); \
 text = path.read_text() if path.exists() else ''; \
 path.write_text(text.replace('required_apps = [\\\"blog\\\"]\\n', '')) if path.exists() else None" && \
+  python -c "from pathlib import Path; path = Path('/home/frappe/frappe-bench/apps/erpnext/erpnext/public/js/setup_wizard.js'); \
+text = path.read_text() if path.exists() else ''; \
+old = '\\t\\tbefore_show: function () {\\n\\t\\t\\tthis.load_chart_of_accounts(this);\\n\\t\\t\\tthis.set_fy_dates(this);\\n\\t\\t},\\n'; \
+new = '\\t\\tbefore_show: function () {\\n\\t\\t\\tlet country = frappe.wizard.values.country || frappe.defaults.get_default(\\\"country\\\");\\n\\n\\t\\t\\tif (!country) {\\n\\t\\t\\t\\tfrappe.set_route(\\\"setup-wizard/0\\\");\\n\\t\\t\\t\\treturn false;\\n\\t\\t\\t}\\n\\n\\t\\t\\tthis.load_chart_of_accounts(this);\\n\\t\\t\\tthis.set_fy_dates(this);\\n\\t\\t},\\n'; \
+path.write_text(text.replace(old, new, 1)) if path.exists() and old in text else None" && \
   if [ "${GIT_TOKEN_CONFIGURED}" = "1" ]; then \
     git config --global --unset-all url."https://oauth2:${GITHUB_PAT}@github.com/".insteadOf; \
   fi && \
