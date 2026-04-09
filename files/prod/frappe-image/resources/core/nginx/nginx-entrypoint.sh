@@ -1,27 +1,5 @@
 #!/bin/bash
 
-set -euo pipefail
-
-ASSETS_ROOT="/home/frappe/frappe-bench/sites/assets"
-
-sync_app_assets() {
-  local app="$1"
-  local source_dir="/home/frappe/frappe-bench/apps/${app}/${app}/public"
-  local target_dir="${ASSETS_ROOT}/${app}"
-
-  if [[ ! -d "${source_dir}" ]]; then
-    return 0
-  fi
-
-  rm -rf "${target_dir}"
-  mkdir -p "${target_dir}"
-  cp -a "${source_dir}/." "${target_dir}/"
-}
-
-for app in frappe erpnext payments ecommerce; do
-  sync_app_assets "${app}"
-done
-
 if [[ -z "$BACKEND" ]]; then
   echo "BACKEND defaulting to 0.0.0.0:8000"
   export BACKEND=0.0.0.0:8000

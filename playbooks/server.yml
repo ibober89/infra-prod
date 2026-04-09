@@ -320,6 +320,41 @@
         SITE_NAME: "{{ velveta_sites.prod }}"
       changed_when: true
 
+    - name: Rebuild production Frappe assets into the shared assets volume
+      ansible.builtin.shell: |
+        docker exec frappe-backend-1 bash -lc '
+          export PATH=/home/frappe/.nvm/versions/node/v24.13.0/bin:$PATH
+          cd /home/frappe/frappe-bench
+          bench build --production
+        '
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Sync built production assets into the shared assets volume
+      ansible.builtin.shell: |
+        docker exec frappe-backend-1 bash -lc '
+          set -e
+          cd /home/frappe/frappe-bench/sites/assets
+          for app in frappe erpnext payments ecommerce; do
+            source_dir="/home/frappe/frappe-bench/apps/${app}/${app}/public"
+            target_dir="/home/frappe/frappe-bench/sites/assets/${app}"
+            rm -rf "${target_dir}"
+            mkdir -p "${target_dir}"
+            cp -a "${source_dir}/." "${target_dir}/"
+          done
+        '
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Restart production Frappe frontend after asset sync
+      ansible.builtin.shell: |
+        docker compose -f {{ velveta_compose_targets.prod_frappe }} restart frontend
+      args:
+        executable: /bin/bash
+      changed_when: true
+
     - name: Stop production nginx before recreating the Next.js network
       ansible.builtin.shell: |
         cd {{ velveta_paths.nginx_root }}
