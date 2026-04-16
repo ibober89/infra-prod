@@ -2,6 +2,9 @@ name: frappe
 
 services:
   backend:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     depends_on:
       configurator:
         condition: service_completed_successfully
@@ -27,6 +30,9 @@ services:
         volume: {}
 
   configurator:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     command:
       - |
         ls -1 apps > sites/apps.txt;
@@ -77,6 +83,9 @@ services:
         volume: {}
 
   create-site:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     depends_on:
       configurator:
         condition: service_completed_successfully
@@ -148,6 +157,9 @@ services:
         volume: {}
 
   frontend:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     command:
       - nginx-entrypoint.sh
     depends_on:
@@ -187,6 +199,9 @@ services:
         volume: {}
 
   queue-long:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     command:
       - bench
       - worker
@@ -217,6 +232,9 @@ services:
         volume: {}
 
   queue-short:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     command:
       - bench
       - worker
@@ -264,6 +282,9 @@ services:
         volume: {}
 
   scheduler:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     command:
       - bench
       - schedule
@@ -292,6 +313,9 @@ services:
         volume: {}
 
   websocket:
+    labels:
+      com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
+      com.velveta.image-id: ${FRAPPE_IMAGE_ID:-unset}
     command:
       - node
       - /home/frappe/frappe-bench/apps/frappe/socketio.js

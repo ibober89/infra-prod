@@ -107,11 +107,11 @@ USER frappe
 
 ARG FRAPPE_BRANCH=version-16
 ARG FRAPPE_PATH=https://github.com/frappe/frappe
-ARG APP_SOURCES_FINGERPRINT=static
+ARG APP_SOURCES_FINGERPRINT=missing
 RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
-  test -n "${APP_SOURCES_FINGERPRINT}" && \
   export APP_INSTALL_ARGS="" && \
   export GIT_TOKEN_CONFIGURED="" && \
+  export APP_SOURCES_FINGERPRINT="${APP_SOURCES_FINGERPRINT}" && \
   if [ -f /run/secrets/github_pat ]; then \
     export GITHUB_PAT="$(tr -d '\n' </run/secrets/github_pat)"; \
     if [ -n "${GITHUB_PAT}" ]; then \
@@ -122,6 +122,7 @@ RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
   if [ -n "${APPS_JSON_BASE64}" ]; then \
     export APP_INSTALL_ARGS="--apps_path=/opt/frappe/apps.json"; \
   fi && \
+  printf '%s\n' "${APP_SOURCES_FINGERPRINT}" > /tmp/app-sources-fingerprint && \
   bench init ${APP_INSTALL_ARGS} \
     --frappe-branch=${FRAPPE_BRANCH} \
     --frappe-path=${FRAPPE_PATH} \
@@ -148,6 +149,9 @@ path.write_text(text.replace(old, new, 1)) if path.exists() and old in text else
 FROM base AS backend
 
 USER frappe
+
+ARG APP_SOURCES_FINGERPRINT=missing
+LABEL org.velveta.app-sources-fingerprint="${APP_SOURCES_FINGERPRINT}"
 
 COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench /home/frappe/frappe-bench
 
