@@ -5,11 +5,13 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
       - "8080:8080"
       - "8082:8082"
     volumes:
       - /opt/velveta/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /opt/velveta/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /opt/velveta/nginx/certs:/etc/nginx/certs:ro
       - /opt/velveta/nginx/sites-enabled:/etc/nginx/sites-enabled:ro
     networks:
       - default
