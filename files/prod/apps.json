@@ -8,6 +8,10 @@
     "branch": "develop"
   },
   {
+    "url": "https://github.com/frappe/blog.git",
+    "branch": "version-16"
+  },
+  {
     "url": "https://github.com/ibober89/ecommerce.git",
     "branch": "main"
   }

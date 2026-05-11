@@ -102,7 +102,7 @@ services:
           echo "Site ${VELVETA_SITE_NAME} already exists.";
           exit 0;
         fi;
-        bench new-site --mariadb-user-host-login-scope='%' --admin-password=${VELVETA_SITE_ADMIN_PASSWORD} --db-root-username=root --db-root-password=${VELVETA_DB_ROOT_PASSWORD} --install-app erpnext --install-app payments --install-app ecommerce --set-default ${VELVETA_SITE_NAME};
+        bench new-site --mariadb-user-host-login-scope='%' --admin-password=${VELVETA_SITE_ADMIN_PASSWORD} --db-root-username=root --db-root-password=${VELVETA_DB_ROOT_PASSWORD} --install-app erpnext --install-app payments --install-app blog --install-app ecommerce --set-default ${VELVETA_SITE_NAME};
         bench --site ${VELVETA_SITE_NAME} set-config host_name https://${VELVETA_ERP_DOMAIN};
         bench --site ${VELVETA_SITE_NAME} clear-cache;
     image: velveta-frappe-prod:16
