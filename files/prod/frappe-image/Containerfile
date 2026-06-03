@@ -19,6 +19,8 @@ RUN useradd -ms /bin/bash frappe \
     curl \
     git \
     vim \
+    locales \
+    libc-l10n \
     nginx \
     gettext-base \
     file \
@@ -53,6 +55,8 @@ RUN useradd -ms /bin/bash frappe \
     && curl -sLO https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOPDF_VERSION/$downloaded_file \
     && apt-get install -y ./$downloaded_file \
     && rm $downloaded_file \
+    && localedef -i tr_TR -f UTF-8 tr_TR.UTF-8 \
+    && localedef -i en_US -f UTF-8 en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/* \
     && rm -fr /etc/nginx/sites-enabled/default \
     && mkdir -p /etc/nginx/snippets \
