@@ -6,6 +6,7 @@ set -euo pipefail
 : "${FRAPPE_IMAGE_TAG:=velveta-frappe-prod:16}"
 : "${FRAPPE_REPO_URL:=https://github.com/frappe/frappe}"
 : "${FRAPPE_REPO_BRANCH:=version-16}"
+: "${FRAPPE_REPO_COMMIT:=}"
 : "${FRAPPE_DOTENV_PATH:=/opt/velveta/prod/frappe/.env}"
 
 if [[ ! -f "${APPS_JSON_PATH}" ]]; then
@@ -22,7 +23,7 @@ if [[ -f "${github_pat_file}" ]]; then
 fi
 
 APP_SOURCES_FINGERPRINT="$(
-  APPS_JSON_PATH="${APPS_JSON_PATH}" GITHUB_PAT="${github_pat}" python3 <<'PY'
+  APPS_JSON_PATH="${APPS_JSON_PATH}" GITHUB_PAT="${github_pat}" FRAPPE_REPO_URL="${FRAPPE_REPO_URL}" FRAPPE_REPO_BRANCH="${FRAPPE_REPO_BRANCH}" FRAPPE_REPO_COMMIT="${FRAPPE_REPO_COMMIT}" python3 <<'PY'
 import json
 import os
 import subprocess
@@ -31,23 +32,26 @@ from urllib.parse import urlparse
 
 apps_json_path = os.environ["APPS_JSON_PATH"]
 github_pat = os.environ.get("GITHUB_PAT", "").strip()
+frappe_repo_url = os.environ["FRAPPE_REPO_URL"]
+frappe_repo_branch = os.environ["FRAPPE_REPO_BRANCH"]
+frappe_repo_commit = os.environ.get("FRAPPE_REPO_COMMIT", "").strip()
 
 with open(apps_json_path, "r", encoding="utf-8") as f:
     apps = json.load(f)
 
 fingerprints = []
 
-for app in apps:
-    url = app["url"]
-    branch = app["branch"]
-    remote = url
 
+def resolve_remote(url: str) -> str:
     parsed = urlparse(url)
     if github_pat and parsed.scheme == "https" and parsed.netloc == "github.com":
-        remote = f"https://oauth2:{github_pat}@github.com{parsed.path}"
+        return f"https://oauth2:{github_pat}@github.com{parsed.path}"
+    return url
 
+
+def resolve_branch_sha(url: str, branch: str) -> str:
     result = subprocess.run(
-        ["git", "ls-remote", remote, branch],
+        ["git", "ls-remote", resolve_remote(url), branch],
         capture_output=True,
         text=True,
         check=False,
@@ -59,7 +63,16 @@ for app in apps:
         sys.exit(result.returncode)
 
     line = next((ln for ln in result.stdout.splitlines() if ln.strip()), "")
-    sha = line.split()[0] if line else "missing"
+    return line.split()[0] if line else "missing"
+
+
+frappe_sha = frappe_repo_commit or resolve_branch_sha(frappe_repo_url, frappe_repo_branch)
+fingerprints.append(f"{frappe_repo_url}@{frappe_repo_branch}={frappe_sha}")
+
+for app in apps:
+    url = app["url"]
+    branch = app["branch"]
+    sha = app.get("commit") or resolve_branch_sha(url, branch)
     fingerprints.append(f"{url}@{branch}={sha}")
 
 print("|".join(fingerprints))
@@ -69,6 +82,7 @@ PY
 docker_build_args=(
   --build-arg=FRAPPE_PATH="${FRAPPE_REPO_URL}"
   --build-arg=FRAPPE_BRANCH="${FRAPPE_REPO_BRANCH}"
+  --build-arg=FRAPPE_COMMIT="${FRAPPE_REPO_COMMIT}"
   --build-arg=APPS_JSON_BASE64="${APPS_JSON_BASE64}"
   --build-arg=APP_SOURCES_FINGERPRINT="${APP_SOURCES_FINGERPRINT}"
   --tag="${FRAPPE_IMAGE_TAG}"

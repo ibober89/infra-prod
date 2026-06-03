@@ -56,6 +56,7 @@ velveta_repos:
   frappe:
     url: https://github.com/frappe/frappe
     version: version-16
+    commit: cbde93c3a931fb8ad77289fd61ea6c746fda49a6
 
 velveta_nextjs:
   site_url: "https://{{ velveta_domains.nextjs_prod[0] }}"

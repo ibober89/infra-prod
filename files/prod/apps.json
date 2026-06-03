@@ -1,18 +1,22 @@
 [
   {
     "url": "https://github.com/frappe/erpnext",
-    "branch": "version-16"
+    "branch": "version-16",
+    "commit": "764c775e1910a0daa360fd28b0ecf635ad07604d"
   },
   {
     "url": "https://github.com/frappe/payments",
-    "branch": "develop"
+    "branch": "develop",
+    "commit": "3cebd9425e414e4c3419a374c616727c5d94b5ea"
   },
   {
     "url": "https://github.com/frappe/blog.git",
-    "branch": "version-16"
+    "branch": "version-16",
+    "commit": "64bea2772218557c608b651bc1e9b743fe6ab130"
   },
   {
     "url": "https://github.com/ibober89/ecommerce.git",
-    "branch": "main"
+    "branch": "main",
+    "commit": "3d87cdab325aacbbba9ddb5efd47d8ae9c345c77"
   }
 ]

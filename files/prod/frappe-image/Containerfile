@@ -111,6 +111,7 @@ USER frappe
 
 ARG FRAPPE_BRANCH=version-16
 ARG FRAPPE_PATH=https://github.com/frappe/frappe
+ARG FRAPPE_COMMIT=
 ARG APP_SOURCES_FINGERPRINT=missing
 RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
   export APP_INSTALL_ARGS="" && \
@@ -137,6 +138,12 @@ RUN --mount=type=secret,id=github_pat,uid=1000,gid=1000,mode=0400 \
     /home/frappe/frappe-bench && \
   cd /home/frappe/frappe-bench && \
   echo "{}" > sites/common_site_config.json && \
+  if [ -n "${FRAPPE_COMMIT}" ]; then \
+    frappe_remote="$(git -C apps/frappe remote | head -n1)" && \
+    git -C apps/frappe fetch --depth=1 "${frappe_remote}" "${FRAPPE_COMMIT}" && \
+    git -C apps/frappe checkout "${FRAPPE_COMMIT}"; \
+  fi && \
+  python -c "exec('''import json\nimport subprocess\nfrom pathlib import Path\n\napps_json = Path(\"/opt/frappe/apps.json\")\nif apps_json.exists():\n    apps = json.loads(apps_json.read_text())\n    for app in apps:\n        commit = (app.get(\"commit\") or \"\").strip()\n        if not commit:\n            continue\n        app_name = Path(app[\"url\"].rstrip(\"/\").removesuffix(\".git\")).name\n        app_path = f\"apps/{app_name}\"\n        remotes = subprocess.check_output([\"git\", \"-C\", app_path, \"remote\"], text=True).splitlines()\n        remote = remotes[0] if remotes else \"origin\"\n        subprocess.run([\"git\", \"-C\", app_path, \"fetch\", \"--depth=1\", remote, commit], check=True)\n        subprocess.run([\"git\", \"-C\", app_path, \"checkout\", commit], check=True)\n''')" && \
   python -c "from pathlib import Path; path = Path('/home/frappe/frappe-bench/apps/erpnext/erpnext/public/js/setup_wizard.js'); \
 text = path.read_text() if path.exists() else ''; \
 old = '\\t\\tbefore_show: function () {\\n\\t\\t\\tthis.load_chart_of_accounts(this);\\n\\t\\t\\tthis.set_fy_dates(this);\\n\\t\\t},\\n'; \

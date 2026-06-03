@@ -292,6 +292,7 @@
         FRAPPE_IMAGE_TAG: "velveta-frappe-prod:16"
         FRAPPE_REPO_URL: "{{ velveta_repos.frappe.url }}"
         FRAPPE_REPO_BRANCH: "{{ velveta_repos.frappe.version }}"
+        FRAPPE_REPO_COMMIT: "{{ velveta_repos.frappe.commit | default('') }}"
         GITHUB_PAT_FILE: "{{ velveta_runner.github_pat_file }}"
       changed_when: true
 
