@@ -7,7 +7,7 @@ ARG FRONTEND_REPO_SHA=unknown
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 
 FROM base AS builder
 WORKDIR /app
