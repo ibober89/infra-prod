@@ -72,6 +72,12 @@ velveta_backup:
   timer_on_calendar: "*-*-* 03:30:00"
   latest_symlink: /opt/velveta/backups/latest
 
+velveta_cleanup:
+  timer_on_calendar: "*-*-* 04:30:00"
+  docker_builder_cache_until: "12h"
+  journal_vacuum_time: "7d"
+  journal_vacuum_size: "300M"
+
 velveta_restore:
   backup_dir: /opt/velveta/backups/latest
 

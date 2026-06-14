@@ -131,6 +131,26 @@
         mode: "0644"
       notify: Reload systemd
 
+    - name: Deploy cleanup script
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/cleanup-prod.sh.j2"
+        dest: "{{ velveta_paths.infra_root }}/scripts/cleanup-prod.sh"
+        mode: "0700"
+
+    - name: Deploy cleanup systemd service
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/velveta-cleanup.service.j2"
+        dest: /etc/systemd/system/velveta-cleanup.service
+        mode: "0644"
+      notify: Reload systemd
+
+    - name: Deploy cleanup systemd timer
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/velveta-cleanup.timer.j2"
+        dest: /etc/systemd/system/velveta-cleanup.timer
+        mode: "0644"
+      notify: Reload systemd
+
     - name: Check whether GitHub runner PAT file exists
       ansible.builtin.stat:
         path: "{{ velveta_runner.github_pat_file }}"
@@ -250,6 +270,12 @@
     - name: Enable backup timer
       ansible.builtin.systemd:
         name: velveta-backup.timer
+        enabled: true
+        state: started
+
+    - name: Enable cleanup timer
+      ansible.builtin.systemd:
+        name: velveta-cleanup.timer
         enabled: true
         state: started
 
@@ -431,12 +457,8 @@
       delay: 10
       until: velveta_verify_nextjs.status in [200, 301, 302, 303, 307, 308]
 
-    - name: Prune stale Docker caches and unused objects
-      ansible.builtin.shell: |
-        docker container prune -f || true
-        docker image prune -f || true
-        docker volume prune -f || true
-        docker builder prune -af --filter 'until=24h' || true
+    - name: Run cleanup after deploy
+      ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/cleanup-prod.sh"
       args:
         executable: /bin/bash
       changed_when: true
