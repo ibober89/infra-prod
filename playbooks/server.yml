@@ -282,6 +282,13 @@
         mode: "0640"
       when: velveta_runner_pat_file.stat.exists
 
+    - name: Ensure prod Frappe env file is writable by the runner user
+      ansible.builtin.file:
+        path: "{{ velveta_paths.prod_frappe_env_file }}"
+        owner: root
+        group: "{{ velveta_users.runner }}"
+        mode: "0660"
+
     - name: Build production Frappe image
       ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/build-prod-frappe-image.sh"
       args:

@@ -14,13 +14,125 @@ if [[ ! -f "${APPS_JSON_PATH}" ]]; then
   exit 1
 fi
 
-APPS_JSON_BASE64="$(base64 -w 0 "${APPS_JSON_PATH}")"
-
+effective_apps_json_path="${APPS_JSON_PATH}"
+generated_apps_json_path=""
+normalized_apps_json_path=""
 github_pat_file="${GITHUB_PAT_FILE:-/opt/velveta/infra-prod/.secrets/github_runner_pat}"
 github_pat=""
 if [[ -f "${github_pat_file}" ]]; then
   github_pat="$(tr -d '\n' < "${github_pat_file}")"
 fi
+
+if [[ -n "${GITHUB_REPOSITORY:-}" && -n "${GITHUB_SHA:-}" ]]; then
+  generated_apps_json_path="$(mktemp)"
+  APPS_JSON_PATH="${APPS_JSON_PATH}" \
+  GENERATED_APPS_JSON_PATH="${generated_apps_json_path}" \
+  GITHUB_REPOSITORY="${GITHUB_REPOSITORY}" \
+  GITHUB_SHA="${GITHUB_SHA}" \
+  GITHUB_REF_NAME="${GITHUB_REF_NAME:-}" \
+  python3 <<'PY'
+import json
+import os
+from pathlib import Path
+from urllib.parse import urlparse
+
+source = Path(os.environ["APPS_JSON_PATH"])
+target = Path(os.environ["GENERATED_APPS_JSON_PATH"])
+repo = os.environ["GITHUB_REPOSITORY"].strip().lower()
+sha = os.environ["GITHUB_SHA"].strip()
+ref_name = os.environ.get("GITHUB_REF_NAME", "").strip()
+
+
+def repo_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    path = parsed.path.strip("/")
+    if path.endswith(".git"):
+        path = path[:-4]
+    return path.lower()
+
+
+apps = json.loads(source.read_text(encoding="utf-8"))
+updated = False
+
+for app in apps:
+    if repo_from_url(app.get("url", "")) == repo:
+        app["commit"] = sha
+        if ref_name:
+            app["branch"] = ref_name
+        updated = True
+
+target.write_text(json.dumps(apps, indent=2) + "\n", encoding="utf-8")
+
+if updated:
+    print(f"Using GitHub Actions commit override for {repo}: {sha}")
+else:
+    print(f"No apps.json entry matched GitHub repository {repo}; using apps.json unchanged.")
+PY
+  effective_apps_json_path="${generated_apps_json_path}"
+fi
+
+normalized_apps_json_path="$(mktemp)"
+APPS_JSON_PATH="${effective_apps_json_path}" \
+NORMALIZED_APPS_JSON_PATH="${normalized_apps_json_path}" \
+GITHUB_PAT="${github_pat}" \
+python3 <<'PY'
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from urllib.parse import urlparse
+
+source = Path(os.environ["APPS_JSON_PATH"])
+target = Path(os.environ["NORMALIZED_APPS_JSON_PATH"])
+github_pat = os.environ.get("GITHUB_PAT", "").strip()
+
+
+def resolve_remote(url: str) -> str:
+    parsed = urlparse(url)
+    if github_pat and parsed.scheme == "https" and parsed.netloc == "github.com":
+        return f"https://oauth2:{github_pat}@github.com{parsed.path}"
+    return url
+
+
+def can_fetch_commit(url: str, commit: str) -> bool:
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run(["git", "-C", tmp, "init", "-q"], check=True)
+        result = subprocess.run(
+            ["git", "-C", tmp, "fetch", "--depth=1", resolve_remote(url), commit],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            sys.stderr.write(
+                f"WARN: pinned commit is not fetchable for {url}: {commit}; using branch head for this build.\n"
+            )
+            if result.stderr:
+                sys.stderr.write(result.stderr)
+            return False
+        return True
+
+
+apps = json.loads(source.read_text(encoding="utf-8"))
+changed = False
+
+for app in apps:
+    commit = (app.get("commit") or "").strip()
+    if commit and not can_fetch_commit(app["url"], commit):
+        app.pop("commit", None)
+        changed = True
+
+target.write_text(json.dumps(apps, indent=2) + "\n", encoding="utf-8")
+if changed:
+    print(f"Using normalized apps.json for build: {target}")
+PY
+effective_apps_json_path="${normalized_apps_json_path}"
+trap '[[ -n "${generated_apps_json_path:-}" ]] && rm -f "${generated_apps_json_path}"; [[ -n "${normalized_apps_json_path:-}" ]] && rm -f "${normalized_apps_json_path}"' EXIT
+
+APPS_JSON_PATH="${effective_apps_json_path}"
+APPS_JSON_BASE64="$(base64 -w 0 "${APPS_JSON_PATH}")"
 
 APP_SOURCES_FINGERPRINT="$(
   APPS_JSON_PATH="${APPS_JSON_PATH}" GITHUB_PAT="${github_pat}" FRAPPE_REPO_URL="${FRAPPE_REPO_URL}" FRAPPE_REPO_BRANCH="${FRAPPE_REPO_BRANCH}" FRAPPE_REPO_COMMIT="${FRAPPE_REPO_COMMIT}" python3 <<'PY'
