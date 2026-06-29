@@ -29,6 +29,7 @@ RUN useradd -ms /bin/bash frappe \
     libpangoft2-1.0-0 \
     libpangocairo-1.0-0 \
     chromium-headless-shell \
+    ffmpeg \
     restic \
     gpg \
     mariadb-client \
