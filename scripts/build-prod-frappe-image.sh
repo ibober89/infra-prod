@@ -14,6 +14,11 @@ if [[ ! -f "${APPS_JSON_PATH}" ]]; then
   exit 1
 fi
 
+if [[ -z "${FRAPPE_REPO_COMMIT}" ]]; then
+  echo "FRAPPE_REPO_COMMIT is required for production builds. Refusing to build branch head ${FRAPPE_REPO_URL}@${FRAPPE_REPO_BRANCH}." >&2
+  exit 1
+fi
+
 effective_apps_json_path="${APPS_JSON_PATH}"
 generated_apps_json_path=""
 normalized_apps_json_path=""
@@ -96,37 +101,34 @@ def resolve_remote(url: str) -> str:
     return url
 
 
-def can_fetch_commit(url: str, commit: str) -> bool:
-    with tempfile.TemporaryDirectory() as tmp:
-        subprocess.run(["git", "-C", tmp, "init", "-q"], check=True)
-        result = subprocess.run(
-            ["git", "-C", tmp, "fetch", "--depth=1", resolve_remote(url), commit],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            sys.stderr.write(
-                f"WARN: pinned commit is not fetchable for {url}: {commit}; using branch head for this build.\n"
-            )
-            if result.stderr:
-                sys.stderr.write(result.stderr)
-            return False
-        return True
+def assert_fetchable_commit(url: str, commit: str) -> None:
+	with tempfile.TemporaryDirectory() as tmp:
+		subprocess.run(["git", "-C", tmp, "init", "-q"], check=True)
+		result = subprocess.run(
+			["git", "-C", tmp, "fetch", "--depth=1", resolve_remote(url), commit],
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+		if result.returncode != 0:
+			sys.stderr.write(
+				f"ERROR: pinned commit is not fetchable for {url}: {commit}.\n"
+			)
+			if result.stderr:
+				sys.stderr.write(result.stderr)
+			sys.exit(result.returncode)
 
 
 apps = json.loads(source.read_text(encoding="utf-8"))
-changed = False
 
 for app in apps:
-    commit = (app.get("commit") or "").strip()
-    if commit and not can_fetch_commit(app["url"], commit):
-        app.pop("commit", None)
-        changed = True
+	commit = (app.get("commit") or "").strip()
+	if not commit:
+		sys.stderr.write(f"ERROR: missing pinned commit for {app['url']}@{app.get('branch', '')}.\n")
+		sys.exit(1)
+	assert_fetchable_commit(app["url"], commit)
 
 target.write_text(json.dumps(apps, indent=2) + "\n", encoding="utf-8")
-if changed:
-    print(f"Using normalized apps.json for build: {target}")
 PY
 effective_apps_json_path="${normalized_apps_json_path}"
 trap '[[ -n "${generated_apps_json_path:-}" ]] && rm -f "${generated_apps_json_path}"; [[ -n "${normalized_apps_json_path:-}" ]] && rm -f "${normalized_apps_json_path}"' EXIT
@@ -147,6 +149,12 @@ github_pat = os.environ.get("GITHUB_PAT", "").strip()
 frappe_repo_url = os.environ["FRAPPE_REPO_URL"]
 frappe_repo_branch = os.environ["FRAPPE_REPO_BRANCH"]
 frappe_repo_commit = os.environ.get("FRAPPE_REPO_COMMIT", "").strip()
+
+if not frappe_repo_commit:
+    sys.stderr.write(
+        f"ERROR: FRAPPE_REPO_COMMIT is required for {frappe_repo_url}@{frappe_repo_branch}.\n"
+    )
+    sys.exit(1)
 
 with open(apps_json_path, "r", encoding="utf-8") as f:
     apps = json.load(f)
@@ -178,13 +186,15 @@ def resolve_branch_sha(url: str, branch: str) -> str:
     return line.split()[0] if line else "missing"
 
 
-frappe_sha = frappe_repo_commit or resolve_branch_sha(frappe_repo_url, frappe_repo_branch)
-fingerprints.append(f"{frappe_repo_url}@{frappe_repo_branch}={frappe_sha}")
+fingerprints.append(f"{frappe_repo_url}@{frappe_repo_branch}={frappe_repo_commit}")
 
 for app in apps:
     url = app["url"]
     branch = app["branch"]
-    sha = app.get("commit") or resolve_branch_sha(url, branch)
+    sha = (app.get("commit") or "").strip()
+    if not sha:
+        sys.stderr.write(f"ERROR: missing pinned commit for {url}@{branch}.\n")
+        sys.exit(1)
     fingerprints.append(f"{url}@{branch}={sha}")
 
 print("|".join(fingerprints))
