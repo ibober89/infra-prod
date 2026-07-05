@@ -2,7 +2,7 @@
   {
     "url": "https://github.com/frappe/erpnext",
     "branch": "version-16",
-    "commit": "054b20a2ae1bdea44694cca72d17412945171cab"
+    "commit": "d1d3b241ae7bc21d18cf830a4bacd568e21a2a19"
   },
   {
     "url": "https://github.com/frappe/payments",
