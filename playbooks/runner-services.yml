@@ -22,6 +22,15 @@
         append: true
         state: present
 
+    - name: Allow runner user to manage production deploys
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/90-velveta-github-runner"
+        content: "{{ velveta_users.runner }} ALL=(root) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+
     - name: Ensure runner directories exist
       ansible.builtin.file:
         path: "{{ item.working_directory }}"
