@@ -1,0 +1,71 @@
+- name: Keep Velveta production GitHub runners managed
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+  tasks:
+    - name: Ensure runner user exists
+      ansible.builtin.user:
+        name: "{{ velveta_users.runner }}"
+        shell: /bin/bash
+        groups:
+          - docker
+          - "{{ velveta_users.frontend_dev }}"
+          - "{{ velveta_users.erp_dev }}"
+        append: true
+        state: present
+
+    - name: Ensure runner directories exist
+      ansible.builtin.file:
+        path: "{{ item.working_directory }}"
+        state: directory
+        owner: "{{ velveta_users.runner }}"
+        group: "{{ velveta_users.runner }}"
+        mode: "0755"
+      loop: "{{ velveta_runner_services }}"
+
+    - name: Check whether runner service launcher exists
+      ansible.builtin.stat:
+        path: "{{ item.working_directory }}/runsvc.sh"
+      loop: "{{ velveta_runner_services }}"
+      register: velveta_runner_execs
+
+    - name: Deploy runner systemd units
+      ansible.builtin.template:
+        src: "{{ velveta_paths.infra_root }}/templates/actions-runner.service.j2"
+        dest: "/etc/systemd/system/{{ item.item.name }}"
+        mode: "0644"
+      loop: "{{ velveta_runner_execs.results }}"
+      when: item.stat.exists
+      notify: Reload systemd
+
+    - name: Flush systemd before starting runners
+      ansible.builtin.meta: flush_handlers
+
+    - name: Ensure runner services are enabled and running
+      ansible.builtin.systemd:
+        name: "{{ item.item.name }}"
+        enabled: true
+        state: started
+      loop: "{{ velveta_runner_execs.results }}"
+      when: item.stat.exists
+
+    - name: Check whether GitHub runner PAT file exists
+      ansible.builtin.stat:
+        path: "{{ velveta_runner.github_pat_file }}"
+      register: velveta_runner_pat_file
+
+    - name: Ensure GitHub runner PAT file is readable by the runner user
+      ansible.builtin.file:
+        path: "{{ velveta_runner.github_pat_file }}"
+        owner: root
+        group: "{{ velveta_users.runner }}"
+        mode: "0640"
+      when: velveta_runner_pat_file.stat.exists
