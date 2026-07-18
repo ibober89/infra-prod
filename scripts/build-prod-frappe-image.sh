@@ -111,6 +111,14 @@ def resolve_remote(url: str) -> str:
     return url
 
 
+def repo_from_url(url: str) -> str:
+	parsed = urlparse(url)
+	path = parsed.path.strip("/")
+	if path.endswith(".git"):
+		path = path[:-4]
+	return path.lower()
+
+
 def assert_fetchable_commit(url: str, commit: str) -> None:
 	with tempfile.TemporaryDirectory() as tmp:
 		subprocess.run(["git", "-C", tmp, "init", "-q"], check=True)
