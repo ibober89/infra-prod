@@ -19,6 +19,11 @@ if [[ -z "${FRAPPE_REPO_COMMIT}" ]]; then
   exit 1
 fi
 
+if [[ "${GITHUB_REPOSITORY:-}" == "ibober89/ecommerce" && "${GITHUB_REF_NAME:-}" != "main" ]]; then
+  echo "Production ecommerce builds must be triggered from main, not ${GITHUB_REF_NAME:-unknown}." >&2
+  exit 1
+fi
+
 effective_apps_json_path="${APPS_JSON_PATH}"
 generated_apps_json_path=""
 normalized_apps_json_path=""
@@ -61,6 +66,11 @@ updated = False
 
 for app in apps:
     if repo_from_url(app.get("url", "")) == repo:
+        if repo == "ibober89/ecommerce" and ref_name != "main":
+            sys.stderr.write(
+                f"ERROR: production ecommerce builds must use main, not {ref_name or 'unknown'}.\n"
+            )
+            sys.exit(1)
         app["commit"] = sha
         if ref_name:
             app["branch"] = ref_name
@@ -122,6 +132,11 @@ def assert_fetchable_commit(url: str, commit: str) -> None:
 apps = json.loads(source.read_text(encoding="utf-8"))
 
 for app in apps:
+	parsed_repo = repo_from_url(app.get("url", ""))
+	branch = (app.get("branch") or "").strip()
+	if parsed_repo == "ibober89/ecommerce" and branch != "main":
+		sys.stderr.write(f"ERROR: production ecommerce app must be pinned to main, not {branch or 'missing'}.\n")
+		sys.exit(1)
 	commit = (app.get("commit") or "").strip()
 	if not commit:
 		sys.stderr.write(f"ERROR: missing pinned commit for {app['url']}@{app.get('branch', '')}.\n")
