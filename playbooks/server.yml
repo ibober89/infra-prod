@@ -382,9 +382,56 @@
         executable: /bin/bash
       changed_when: true
 
-    - name: Restart production Frappe frontend after asset sync
+    - name: Verify production Frappe asset manifest
       ansible.builtin.shell: |
-        docker compose -f {{ velveta_compose_targets.prod_frappe }} restart frontend
+        docker exec frappe-backend-1 bash -lc '
+          set -e
+          cd /home/frappe/frappe-bench
+          python - <<'"'"'PY'"'"'
+        import json
+        import sys
+        from pathlib import Path
+
+        manifest_path = Path("sites/assets/assets.json")
+        assets_root = Path("sites")
+
+        if not manifest_path.exists():
+            sys.stderr.write("Missing sites/assets/assets.json\n")
+            sys.exit(1)
+
+        missing = []
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for logical_name, asset_path in data.items():
+            if isinstance(asset_path, str) and asset_path.startswith("/assets/"):
+                candidate = assets_root / asset_path.lstrip("/")
+                if not candidate.exists():
+                    missing.append(f"{logical_name} -> {asset_path}")
+
+        if missing:
+            sys.stderr.write("Missing production assets referenced by assets.json:\n")
+            sys.stderr.write("\n".join(missing[:50]))
+            sys.stderr.write("\n")
+            sys.exit(1)
+        PY
+        '
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Clear production Frappe caches after asset sync
+      ansible.builtin.shell: |
+        docker exec frappe-backend-1 bash -lc '
+          cd /home/frappe/frappe-bench
+          bench --site {{ velveta_sites.prod }} clear-cache
+          bench --site {{ velveta_sites.prod }} clear-website-cache
+        '
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Restart production Frappe services after asset sync
+      ansible.builtin.shell: |
+        docker compose -f {{ velveta_compose_targets.prod_frappe }} restart backend frontend websocket queue-short queue-long scheduler
       args:
         executable: /bin/bash
       changed_when: true

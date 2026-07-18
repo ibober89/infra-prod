@@ -43,6 +43,7 @@ if [[ -n "${GITHUB_REPOSITORY:-}" && -n "${GITHUB_SHA:-}" ]]; then
   python3 <<'PY'
 import json
 import os
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
