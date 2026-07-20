@@ -294,6 +294,7 @@
       loop:
         - "{{ velveta_paths.infra_root }}/scripts/build-prod-frappe-image.sh"
         - "{{ velveta_paths.infra_root }}/scripts/init-fresh-prod.sh"
+        - "{{ velveta_paths.infra_root }}/scripts/sync-prod-frappe-assets.sh"
 
     - name: Check whether GitHub runner PAT file exists
       ansible.builtin.stat:
@@ -354,86 +355,13 @@
         SITE_NAME: "{{ velveta_sites.prod }}"
       changed_when: true
 
-    - name: Rebuild production Frappe assets into the shared assets volume
-      ansible.builtin.shell: |
-        docker exec frappe-backend-1 bash -lc '
-          export PATH=/home/frappe/.nvm/versions/node/v24.13.0/bin:$PATH
-          cd /home/frappe/frappe-bench
-          bench build --production
-        '
+    - name: Sync and verify production Frappe assets
+      ansible.builtin.shell: "{{ velveta_paths.infra_root }}/scripts/sync-prod-frappe-assets.sh"
       args:
         executable: /bin/bash
-      changed_when: true
-
-    - name: Sync built production assets into the shared assets volume
-      ansible.builtin.shell: |
-        docker exec frappe-backend-1 bash -lc '
-          set -e
-          cd /home/frappe/frappe-bench/sites/assets
-          for app in frappe erpnext payments ecommerce; do
-            source_dir="/home/frappe/frappe-bench/apps/${app}/${app}/public"
-            target_dir="/home/frappe/frappe-bench/sites/assets/${app}"
-            rm -rf "${target_dir}"
-            mkdir -p "${target_dir}"
-            cp -a "${source_dir}/." "${target_dir}/"
-          done
-        '
-      args:
-        executable: /bin/bash
-      changed_when: true
-
-    - name: Verify production Frappe asset manifest
-      ansible.builtin.shell: |
-        docker exec frappe-backend-1 bash -lc '
-          set -e
-          cd /home/frappe/frappe-bench
-          python - <<'"'"'PY'"'"'
-        import json
-        import sys
-        from pathlib import Path
-
-        manifest_path = Path("sites/assets/assets.json")
-        assets_root = Path("sites")
-
-        if not manifest_path.exists():
-            sys.stderr.write("Missing sites/assets/assets.json\n")
-            sys.exit(1)
-
-        missing = []
-        data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        for logical_name, asset_path in data.items():
-            if isinstance(asset_path, str) and asset_path.startswith("/assets/"):
-                candidate = assets_root / asset_path.lstrip("/")
-                if not candidate.exists():
-                    missing.append(f"{logical_name} -> {asset_path}")
-
-        if missing:
-            sys.stderr.write("Missing production assets referenced by assets.json:\n")
-            sys.stderr.write("\n".join(missing[:50]))
-            sys.stderr.write("\n")
-            sys.exit(1)
-        PY
-        '
-      args:
-        executable: /bin/bash
-      changed_when: false
-
-    - name: Clear production Frappe caches after asset sync
-      ansible.builtin.shell: |
-        docker exec frappe-backend-1 bash -lc '
-          cd /home/frappe/frappe-bench
-          bench --site {{ velveta_sites.prod }} clear-cache
-          bench --site {{ velveta_sites.prod }} clear-website-cache
-        '
-      args:
-        executable: /bin/bash
-      changed_when: true
-
-    - name: Restart production Frappe services after asset sync
-      ansible.builtin.shell: |
-        docker compose -f {{ velveta_compose_targets.prod_frappe }} restart backend frontend websocket queue-short queue-long scheduler
-      args:
-        executable: /bin/bash
+      environment:
+        FRAPPE_COMPOSE_FILE: "{{ velveta_compose_targets.prod_frappe }}"
+        SITE_NAME: "{{ velveta_sites.prod }}"
       changed_when: true
 
     - name: Stop production nginx before recreating the Next.js network

@@ -19,6 +19,14 @@ services:
         source: sites
         target: /home/frappe/frappe-bench/sites
         volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
   configurator:
     labels:
       com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
@@ -55,6 +63,14 @@ services:
       - type: volume
         source: sites
         target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
         volume: {}
   db:
     command:
@@ -117,6 +133,14 @@ services:
         source: sites
         target: /home/frappe/frappe-bench/sites
         volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
   queue-long:
     labels:
       com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
@@ -141,6 +165,14 @@ services:
         source: sites
         target: /home/frappe/frappe-bench/sites
         volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
   queue-short:
     labels:
       com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
@@ -164,6 +196,14 @@ services:
       - type: volume
         source: sites
         target: /home/frappe/frappe-bench/sites
+        volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
         volume: {}
   redis-cache:
     image: redis:6.2-alpine
@@ -202,6 +242,14 @@ services:
         source: sites
         target: /home/frappe/frappe-bench/sites
         volume: {}
+      - type: volume
+        source: assets
+        target: /home/frappe/frappe-bench/sites/assets
+        volume: {}
+      - type: volume
+        source: logs
+        target: /home/frappe/frappe-bench/logs
+        volume: {}
   websocket:
     labels:
       com.velveta.deploy-fingerprint: ${FRAPPE_DEPLOY_FINGERPRINT:-unset}
@@ -234,6 +282,10 @@ volumes:
     name: frappe_redis-queue-data
   sites:
     name: frappe_sites
+  assets:
+    name: frappe_assets
+  logs:
+    name: frappe_logs
 x-backend-defaults:
   depends_on:
     configurator:
@@ -243,6 +295,8 @@ x-backend-defaults:
   restart: unless-stopped
   volumes:
     - sites:/home/frappe/frappe-bench/sites
+    - assets:/home/frappe/frappe-bench/sites/assets
+    - logs:/home/frappe/frappe-bench/logs
 x-customizable-image:
   image: velveta-frappe-prod:16
   pull_policy: never
