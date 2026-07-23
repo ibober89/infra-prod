@@ -28,7 +28,11 @@ docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
     rm -rf \"\${tmp_dir}\"
     mkdir -p \"\${tmp_dir}\"
     cp -a \"\${source_dir}/.\" \"\${tmp_dir}/\"
-    rm -rf \"\${target_dir}\"
+    if [ -L \"\${target_dir}\" ]; then
+      unlink \"\${target_dir}\"
+    elif [ -e \"\${target_dir}\" ]; then
+      mv \"\${target_dir}\" \"\${target_dir}.previous.\$\$\"
+    fi
     mv \"\${tmp_dir}\" \"\${target_dir}\"
   done
 
