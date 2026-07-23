@@ -5,6 +5,17 @@ set -euo pipefail
 : "${SITE_NAME:=erp.velvetacare.com}"
 : "${FRAPPE_APPS:=frappe erpnext payments ecommerce blog}"
 : "${RUN_BENCH_BUILD:=0}"
+: "${FRAPPE_IMAGE_TAG:=velveta-frappe-prod:16}"
+: "${FRAPPE_ASSETS_VOLUME_PATH:=/var/lib/docker/volumes/frappe_assets/_data}"
+
+if [ "${RUN_BENCH_BUILD}" = "0" ]; then
+  image_container_id="$(docker create "${FRAPPE_IMAGE_TAG}")"
+  trap 'docker rm -f "${image_container_id}" >/dev/null 2>&1 || true' EXIT
+  mkdir -p "${FRAPPE_ASSETS_VOLUME_PATH}"
+  docker cp \
+    "${image_container_id}:/home/frappe/frappe-bench/sites/assets/assets.json" \
+    "${FRAPPE_ASSETS_VOLUME_PATH}/assets.json"
+fi
 
 docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
   set -euo pipefail
