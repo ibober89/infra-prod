@@ -361,7 +361,7 @@
           set -e
           cd /home/frappe/frappe-bench
           bench --site {{ velveta_sites.prod }} migrate
-          bench --site {{ velveta_sites.prod }} execute ecommerce.patches.sync_sales_print_formats_v7.execute
+          bench --site {{ velveta_sites.prod }} execute ecommerce.printing.sync_sales_print_formats.sync_sales_print_formats
           bench --site {{ velveta_sites.prod }} execute ecommerce.patches.ensure_hepsijet_shipping_rates.execute
           bench --site {{ velveta_sites.prod }} clear-cache
         '
