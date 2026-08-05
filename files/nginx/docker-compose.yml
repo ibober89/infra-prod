@@ -13,6 +13,7 @@ services:
       - /opt/velveta/nginx/conf.d:/etc/nginx/conf.d:ro
       - /opt/velveta/nginx/certs:/etc/nginx/certs:ro
       - /opt/velveta/nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - /opt/velveta/logs/nginx:/var/log/nginx
     networks:
       - default
       - prod-frappe

@@ -27,6 +27,8 @@
         - "{{ velveta_paths.nginx_root }}/conf.d"
         - "{{ velveta_paths.nginx_root }}/sites-enabled"
         - "{{ velveta_paths.nginx_root }}/ssl"
+        - "{{ velveta_root }}/logs"
+        - "{{ velveta_root }}/logs/nginx"
         - "{{ velveta_paths.backups_root }}"
         - "{{ velveta_paths.secrets_root }}"
 
@@ -127,6 +129,12 @@
       ansible.builtin.copy:
         src: "{{ velveta_paths.infra_root }}/files/nginx/default.conf"
         dest: "{{ velveta_paths.nginx_root }}/conf.d/default.conf"
+        mode: "0644"
+
+    - name: Deploy nginx logrotate config
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/nginx/logrotate"
+        dest: /etc/logrotate.d/velveta-nginx
         mode: "0644"
 
     - name: Show next-step reminder

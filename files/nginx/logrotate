@@ -1,0 +1,9 @@
+/opt/velveta/logs/nginx/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
