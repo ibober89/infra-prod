@@ -407,6 +407,17 @@
         executable: /bin/bash
       changed_when: true
 
+    - name: Sync production Nginx configuration files
+      ansible.builtin.copy:
+        src: "{{ velveta_paths.infra_root }}/files/nginx/"
+        dest: "{{ velveta_paths.nginx_root }}/"
+        mode: "0644"
+
+    - name: Ensure fail2ban-setup script is executable
+      ansible.builtin.file:
+        path: "{{ velveta_paths.nginx_root }}/fail2ban-setup.sh"
+        mode: "0755"
+
     - name: Start production nginx stack
       ansible.builtin.shell: |
         cd {{ velveta_paths.nginx_root }}
