@@ -24,6 +24,7 @@
           - rsync
           - acl
           - unzip
+          - fail2ban
         state: present
         update_cache: true
 
@@ -410,6 +411,14 @@
       ansible.builtin.shell: |
         cd {{ velveta_paths.nginx_root }}
         docker compose -f {{ velveta_compose_targets.nginx }} up -d
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Deploy and configure Fail2ban security setup
+      ansible.builtin.shell: |
+        chmod +x {{ velveta_paths.nginx_root }}/fail2ban-setup.sh
+        {{ velveta_paths.nginx_root }}/fail2ban-setup.sh
       args:
         executable: /bin/bash
       changed_when: true

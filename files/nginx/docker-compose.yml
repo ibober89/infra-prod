@@ -3,6 +3,8 @@ services:
     image: nginx:1.27-alpine
     container_name: velveta-nginx
     restart: unless-stopped
+    environment:
+      TZ: Europe/Istanbul
     ports:
       - "80:80"
       - "443:443"
@@ -14,6 +16,7 @@ services:
       - /opt/velveta/nginx/certs:/etc/nginx/certs:ro
       - /opt/velveta/nginx/sites-enabled:/etc/nginx/sites-enabled:ro
       - /opt/velveta/logs/nginx:/var/log/nginx
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - default
       - prod-frappe
