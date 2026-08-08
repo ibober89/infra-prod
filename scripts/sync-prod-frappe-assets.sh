@@ -13,7 +13,7 @@ if [ "${RUN_BENCH_BUILD}" = "0" ]; then
   docker run --rm --user root \
     -v "${FRAPPE_ASSETS_VOLUME_PATH}:/asset-target" \
     "${FRAPPE_IMAGE_TAG}" \
-    bash -lc "cp -aL /home/frappe/frappe-bench/sites/assets/. /asset-target/"
+    bash -lc "find /asset-target -mindepth 1 -maxdepth 1 -exec rm -rf {} + && cp -aL /home/frappe/frappe-bench/sites/assets/. /asset-target/"
 fi
 
 docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
