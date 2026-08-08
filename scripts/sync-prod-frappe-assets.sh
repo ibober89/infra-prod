@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${FRAPPE_COMPOSE_FILE:=/opt/velveta/prod/frappe/docker-compose.frappe.yml}"
 : "${SITE_NAME:=erp.velvetacare.com}"
-: "${FRAPPE_APPS:=frappe erpnext payments ecommerce blog}"
+: "${FRAPPE_APPS:=frappe erpnext payments ecommerce blog drive writer}"
 : "${RUN_BENCH_BUILD:=0}"
 : "${FRAPPE_IMAGE_TAG:=velveta-frappe-prod:16}"
 : "${FRAPPE_ASSETS_VOLUME_PATH:=/var/lib/docker/volumes/frappe_assets/_data}"
