@@ -13,8 +13,8 @@ if [ "${RUN_BENCH_BUILD}" = "0" ]; then
   trap 'docker rm -f "${image_container_id}" >/dev/null 2>&1 || true' EXIT
   mkdir -p "${FRAPPE_ASSETS_VOLUME_PATH}"
   docker cp \
-    "${image_container_id}:/home/frappe/frappe-bench/sites/assets/assets.json" \
-    "${FRAPPE_ASSETS_VOLUME_PATH}/assets.json"
+    "${image_container_id}:/home/frappe/frappe-bench/sites/assets/." \
+    "${FRAPPE_ASSETS_VOLUME_PATH}/"
 fi
 
 docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
