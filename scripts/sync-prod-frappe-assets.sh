@@ -10,11 +10,13 @@ set -euo pipefail
 
 if [ "${RUN_BENCH_BUILD}" = "0" ]; then
   image_container_id="$(docker create "${FRAPPE_IMAGE_TAG}")"
-  trap 'docker rm -f "${image_container_id}" >/dev/null 2>&1 || true' EXIT
+  image_assets_dir="$(mktemp -d)"
+  trap 'docker rm -f "${image_container_id}" >/dev/null 2>&1 || true; rm -rf "${image_assets_dir}"' EXIT
   mkdir -p "${FRAPPE_ASSETS_VOLUME_PATH}"
   docker cp \
     "${image_container_id}:/home/frappe/frappe-bench/sites/assets/." \
-    "${FRAPPE_ASSETS_VOLUME_PATH}/"
+    "${image_assets_dir}/"
+  cp -a "${image_assets_dir}/." "${FRAPPE_ASSETS_VOLUME_PATH}/"
 fi
 
 docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
