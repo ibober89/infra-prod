@@ -6,6 +6,8 @@ set -euo pipefail
 : "${SITE_NAME:=erp.velvetacare.com}"
 : "${FRAPPE_ASSETS_VOLUME:=frappe_assets}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 cd "${PROD_ROOT}"
 
 docker compose -f "${FRAPPE_COMPOSE_FILE}" down --remove-orphans
@@ -28,4 +30,4 @@ docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
   bench --site ${SITE_NAME} clear-cache
 "
 
-FRAPPE_COMPOSE_FILE="${FRAPPE_COMPOSE_FILE}" SITE_NAME="${SITE_NAME}" "$(dirname "$0")/sync-prod-frappe-assets.sh"
+FRAPPE_COMPOSE_FILE="${FRAPPE_COMPOSE_FILE}" SITE_NAME="${SITE_NAME}" "${SCRIPT_DIR}/sync-prod-frappe-assets.sh"
