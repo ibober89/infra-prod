@@ -17,6 +17,17 @@
   {
     "url": "https://github.com/ibober89/ecommerce.git",
     "branch": "main",
-    "commit": "bb2db680f41f87ede0e193675586408fb6be1a34"
+    "commit": "284e113fdbce64eee71fd3f92514c2620f452ba1"
+  },
+  {
+    "url": "https://github.com/frappe/drive",
+    "branch": "develop",
+    "commit": "cd3438d1ab0b0fc1b8c10e282639ec0bd2ee7d82"
+  },
+  {
+    "url": "https://github.com/frappe/writer",
+    "branch": "develop",
+    "commit": "b981738c7e0981d4ecf0937bd4bd30c4de3f5038"
   }
 ]
+
