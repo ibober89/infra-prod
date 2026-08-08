@@ -28,17 +28,24 @@ docker compose -f "${FRAPPE_COMPOSE_FILE}" exec -T backend bash -lc "
   cd /home/frappe/frappe-bench/sites/assets
   for app in ${FRAPPE_APPS}; do
     source_dir=\"/home/frappe/frappe-bench/apps/\${app}/\${app}/public\"
+    frontend_source_dir=\"/home/frappe/frappe-bench/apps/\${app}/frontend/public\"
     target_dir=\"/home/frappe/frappe-bench/sites/assets/\${app}\"
     tmp_dir=\"/home/frappe/frappe-bench/sites/assets/.\${app}.sync.\$\$\"
 
-    if [ ! -d \"\${source_dir}\" ]; then
-      echo \"Skipping missing app public directory: \${source_dir}\"
+    if [ ! -d \"\${source_dir}\" ] && [ ! -d \"\${frontend_source_dir}\" ]; then
+      echo \"Skipping missing app public directories: \${source_dir}, \${frontend_source_dir}\"
       continue
     fi
 
     rm -rf \"\${tmp_dir}\"
     mkdir -p \"\${tmp_dir}\"
-    cp -a \"\${source_dir}/.\" \"\${tmp_dir}/\"
+    if [ -d \"\${source_dir}\" ]; then
+      cp -a \"\${source_dir}/.\" \"\${tmp_dir}/\"
+    fi
+    if [ -d \"\${frontend_source_dir}\" ]; then
+      mkdir -p \"\${tmp_dir}/frontend\"
+      cp -a \"\${frontend_source_dir}/.\" \"\${tmp_dir}/frontend/\"
+    fi
     if [ -L \"\${target_dir}\" ]; then
       unlink \"\${target_dir}\"
     elif [ -e \"\${target_dir}\" ]; then
