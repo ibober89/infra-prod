@@ -1,0 +1,66 @@
+{
+  "repositories": {
+    "ibober89/ecommerce": {
+      "full_image": [
+        ".github/workflows/deploy-prod.yml",
+        "pyproject.toml",
+        "requirements*.txt"
+      ],
+      "vendor_patch": [
+        "ecommerce/overrides/**"
+      ],
+      "migrate_required": [
+        "ecommerce/patches.txt",
+        "ecommerce/patches/**",
+        "ecommerce/**/doctype/**",
+        "ecommerce/fixtures/**"
+      ],
+      "asset_build_required": [
+        "ecommerce/public/**",
+        "ecommerce/templates/**",
+        "ecommerce/www/**"
+      ],
+      "restart_required": [
+        "ecommerce/**",
+        "postman/**",
+        "docs/**"
+      ]
+    },
+    "ibober89/infra-prod": {
+      "full_image": [
+        "files/prod/frappe-image/**",
+        "files/prod/apps.json",
+        "scripts/build-prod-frappe-image.sh"
+      ],
+      "edge_nginx": [
+        "files/nginx/**",
+        "templates/*nginx*",
+        "playbooks/bootstrap.yml"
+      ],
+      "compose_required": [
+        "templates/docker-compose.frappe.yml.j2",
+        "files/prod/docker-compose*.yml",
+        "templates/frappe.env.j2",
+        "files/prod/frappe.env"
+      ],
+      "runner_required": [
+        "templates/actions-runner.service.j2",
+        "playbooks/runner-services.yml"
+      ],
+      "restart_required": [
+        "scripts/apply-prod-frappe-image.sh",
+        "scripts/sync-prod-frappe-assets.sh",
+        "scripts/init-fresh-prod.sh"
+      ]
+    }
+  },
+  "mode_precedence": [
+    "full_image",
+    "vendor_patch",
+    "compose_required",
+    "ecommerce_fast",
+    "edge_nginx",
+    "runner_required",
+    "docs_only"
+  ]
+}
