@@ -2,9 +2,11 @@
   "repositories": {
     "ibober89/ecommerce": {
       "full_image": [
-        ".github/workflows/deploy-prod.yml",
         "pyproject.toml",
         "requirements*.txt"
+      ],
+      "runner_required": [
+        ".github/workflows/**"
       ],
       "vendor_patch": [
         "ecommerce/overrides/**"
