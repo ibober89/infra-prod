@@ -4,9 +4,18 @@ set -euo pipefail
 : "${PROD_ROOT:=/opt/velveta/prod/frappe}"
 : "${FRAPPE_COMPOSE_FILE:=/opt/velveta/prod/frappe/docker-compose.frappe.yml}"
 : "${SITE_NAME:=erp.velvetacare.com}"
+: "${ECOMMERCE_APP_ROOT:=/opt/velveta/prod/apps/ecommerce}"
 MARKER_FILE="${PROD_ROOT}/.fresh-bootstrap-complete"
 
 cd "${PROD_ROOT}"
+
+if [[ ! -f "${ECOMMERCE_APP_ROOT}/ecommerce/__init__.py" ]]; then
+  mkdir -p "${ECOMMERCE_APP_ROOT}"
+  docker run --rm --entrypoint bash \
+    -v "${ECOMMERCE_APP_ROOT}:/app-target" \
+    velveta-frappe-prod:16 \
+    -lc "find /app-target -mindepth 1 -maxdepth 1 -exec rm -rf {} +; cp -a /home/frappe/frappe-bench/apps/ecommerce/. /app-target/"
+fi
 
 if [[ ! -f "${MARKER_FILE}" ]]; then
   docker compose -f "${FRAPPE_COMPOSE_FILE}" down --remove-orphans || true
