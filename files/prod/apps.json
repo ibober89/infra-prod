@@ -17,7 +17,7 @@
   {
     "url": "https://github.com/ibober89/ecommerce.git",
     "branch": "main",
-    "commit": "509fdaa50bc82816ce55cb4e9bdfe438f5245a1b"
+    "commit": "f99e9a4c5b3861663c9b58b10d11eb18c520cc1d"
   },
   {
     "url": "https://github.com/frappe/drive",
@@ -30,4 +30,3 @@
     "commit": "b981738c7e0981d4ecf0937bd4bd30c4de3f5038"
   }
 ]
-
